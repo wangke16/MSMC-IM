@@ -6,13 +6,63 @@ This is a new method based on MSMC for inferring demographic parameters such as 
 The program is written in python3. python 3 is required for running this program. 
 
 # Guidance
-Usage: \
-MSMC_IM_StaticFit.py [-h] [-N1 N1] [-N2 N2] [-NA NA] [-T T] [-t0 T0] [-m M] [--Ti_MSMC] [-n_T N_T] [-N0 N0] [--noMig] Input > Inferred.params.out
+Usage on MSMC_IM_StaticFit.py
+```
+usage: MSMC_IM_StaticFit.py [-h] [-N1 N1] [-N2 N2] [-NA NA] [-T T] [-t0 T0]
+                            [-m M] [--Ti_MSMC] [-n_T N_T] [-N0 N0] [--noMig]
+                            Input
 
-Usage: \
-MSMC_IM_DynamicFit.py [-h] [-N1 N1] [-N2 N2] [-NA NA] [-T T] [-t0 T0] [-m M] [--Ti_MSMC] [-n_T N_T] [-N0 N0] Input > Inferred.params.out
+Find parameters with the max likelihood for fitting IM model to MSMC
 
-Here you can specify the initial values for parameters in the fitting. The required input file for MSMC_IM_StaticFit.py/MSMC_IM_DynamicFit.py is the MSMC result including six columns as shown in the following:
+positional arguments:
+  Input       OUTPUT from MSMC
+
+optional arguments:
+  -h, --help  show this help message and exit
+  -N1 N1      Effective population size of Pop1. Default=1500
+  -N2 N2      Effective population size of Pop2. Default=1500
+  -NA NA      Effective population sieze of a population ancestral to
+              population 1 and population 2. Default=1500
+  -T T        Split time between population 1 and population 2. Default=2000
+  -t0 T0      Time when migrations between population 1 and population 2 stop.
+              Default=500
+  -m M        Symetric Migration rate. Default=10e-5
+  --Ti_MSMC   whether use the same time boundaries from MSMC for
+              fitting(recommended). Default=False
+  -n_T N_T    Number of time segments in total in fitting. Default=1000
+  -N0 N0      Average effective population size. Default=20000
+  --noMig     Option for estimating the migration rates or not(recommended).
+              Default=False
+```
+
+Usage on MSMC_IM_DynamicFit.py
+```
+usage: MSMC_IM_DynamicFit.py [-h] [-N1 N1] [-N2 N2] [-NA NA] [-T T] [-t0 T0]
+                             [-m M] [--Ti_MSMC] [-n_T N_T] [-N0 N0]
+                             Input
+
+Find parameters with the max likelihood for fitting IM model to MSMC
+
+positional arguments:
+  Input       OUTPUT from MSMC
+
+optional arguments:
+  -h, --help  show this help message and exit
+  -N1 N1      Effective population size of Pop1. Default=1500
+  -N2 N2      Effective population size of Pop2. Default=1500
+  -NA NA      Effective population sieze of a population ancestral to
+              population 1 and population 2. Default=1500
+  -T T        Split time between population 1 and population 2. Default=2000
+  -t0 T0      Time when migrations between population 1 and population 2 stop.
+              Default=500
+  -m M        Symetric Migration rate. Default=10e-5
+  --Ti_MSMC   whether use the same time boundaries from MSMC for
+              fitting(recommended).
+  -n_T N_T    Number of time segments in total in fitting. Default=1000
+  -N0 N0      Average effective population size. Default=20000
+
+```
+Here you can specify the initial values for parameters in the fitting. The required input file for MSMC_IM_StaticFit.py/MSMC_IM_DynamicFit.py is the MSMC result including six columns, as shown in the following:
 
 ```
 time_index	left_time_boundary	right_time_boundary	lambda_00	lambda_01	lambda_11
