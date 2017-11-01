@@ -1,13 +1,29 @@
 # MSMC-IM
 
 This is a new method based on MSMC for inferring demographic parameters such as population size, split time, symmetric migration rates and when migration stops, by fitting MSMC results to a Isolation-Migration model. Currently there are two modes of the program: static and dynamic, which estimate either constant population size or time-dependent population size. 
+
+# Get Started
+The program is written in python3. python 3 is required for running this program. 
+
 # Guidance
 Usage: \
-MSMC_IM_StaticFit.py [-h] [-N1 N1] [-N2 N2] [-NA NA] [-T T] [-t0 T0] [-m M] [--Ti_MSMC] [-n_T N_T] [-N0 N0] [--noMig] Input \
+MSMC_IM_StaticFit.py [-h] [-N1 N1] [-N2 N2] [-NA NA] [-T T] [-t0 T0] [-m M] [--Ti_MSMC] [-n_T N_T] [-N0 N0] [--noMig] Input > Inferred.params.out
 
 Usage: \
-MSMC_IM_DynamicFit.py [-h] [-N1 N1] [-N2 N2] [-NA NA] [-T T] [-t0 T0] [-m M] [--Ti_MSMC] [-n_T N_T] [-N0 N0] Input
+MSMC_IM_DynamicFit.py [-h] [-N1 N1] [-N2 N2] [-NA NA] [-T T] [-t0 T0] [-m M] [--Ti_MSMC] [-n_T N_T] [-N0 N0] Input > Inferred.params.out
 
-Here the input file for MSMC_IM is the MSMC result including six columns: time_index, left_time_boundaries, right_time_boundaries, lambda_00, lambda_01, lambda_11. You have options to specify the initial values for parameters in the fitting.
-# Installation
-The program is written in python3. python 3 is required for running this program. 
+Here you can specify the initial values for parameters in the fitting. The required input file for MSMC_IM_StaticFit.py/MSMC_IM_DynamicFit.py is the MSMC result including six columns as shown in the following:
+
+```
+time_index	left_time_boundary	right_time_boundary	lambda_00	lambda_01	lambda_11
+0	-0	1.41401e-06	11901.4	0.0243435	0.0200401
+1	1.41401e-06	2.86475e-06	22178.5	13.8383	9430.91
+2	2.86475e-06	4.35418e-06	3119.07	145.393	11139.3
+3	4.35418e-06	5.88443e-06	1830.22	689.113	2871.82
+4	5.88443e-06	7.45778e-06	2222.18	2014.26	1806.34
+5	7.45778e-06	9.07675e-06	3295.83	3356.35	3416.86
+6	9.07675e-06	1.0744e-05	4809.94	5153.04	5496.14
+7	1.0744e-05	1.24627e-05	6598.26	7268.54	7938.82
+8	1.24627e-05	1.42358e-05	8488.37	9592.56	10696.7
+...
+```
