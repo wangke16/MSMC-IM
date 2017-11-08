@@ -105,7 +105,50 @@ def computeTMRCA_t0(N1, N2, NA, T, m, t, t0, init_vector): #Compute TMRCA distri
         interger = (t - T) * 1./(2. * NA)
         p = (np.dot(x_t0, qexp_T)[0] + np.dot(x_t0, qexp_T)[1] + np.dot(x_t0, qexp_T)[2])* 1. /(2. * NA) * math.exp(-interger)
     return p
-    
+
+def makeQpropagator_xvector(init_vector, T_indice, time_boundaries, N1, N2, m, t0): 
+    x_0 = init_vector
+    List_x_vector_beft0 = [init_vector]
+    t0_indice = bisect.bisect_right(time_boundaries, t0)-1
+    for i in range(t0_indice):
+        q = makeQ_0(N1[i], N2[i])
+        q_exm = makeQexp(q, time_boundaries[i+1]-time_boundaries[i])
+        x_vector = np.dot(List_x_vector_beft0[i-1], q_exm)
+        List_x_vector_beft0.append(x_vector)
+        
+    if t0 == time_boundaries[t0_indice]: #t0 can only be >=time_boundaries[t0_indice] (of course t0 < time_boundaries[t0_indice+1])
+        x_t0 = List_x_vector[-1]
+    else:
+        q_t0 = makeQ_0(N1[t0_indice], N2[t0_indice]) #Calculate matrix before t0 thus without migration 
+        q_exm = makeQexp(q_t0, t0-time_boundaries[t0_indice])) #Here is the Qpropagator at t0
+        x_t0 =  np.dot(List_x_vector[-1], q_exm) 
+    List_x_vector_aft0 = [x_t0]
+    if T_indice == t0_indice: #T_indice can only be >= t0_indice because T must >=t0. 
+        if T == t0:
+            List_x_vector_aft0.append(x_t0)
+        else: 
+            q_T = makeQ(m, N1[T_indice], N2[T_indice])
+            x_T = np.dot(x_t0, makeQexp(q_T, T-t0))
+            List_x_vector_aft0.append(x_T)
+    else:
+        q_t0_prime = makeQ(m, N1[t0_indice], N2[t0_indice]) #Calculate matrix after t0 thus with migration
+        x_temp = np.dot(x_t0, makeQexp(q_t0_prime, time_boundaries[t0_indice+1]-t0))
+        List_x_vector_aft0.append(x_temp)
+        if T_indice == t0_indice + 1: 
+             q_T = makeQ(m, N1[T_indice], N2[T_indice]) #Calculate matrix during time period [time_boundaries[T_indice], T]
+             x_T =  np.dot(List_x_vector_aft0[-1], makeQexp(q_T, T - time_boundaries[T_indice]))
+             List_x_vector_aft0.append(x_T)
+        else:
+            for j in range(t0_indice+1, T_indice):
+                q = makeQ(m, N1[j], N2[j])
+                x_temp = np.dot(List_x_vector_aft0[-1], makeQexp(q, time_boundaries[j+1]-time_boundaries[j]))
+                List_x_vector_aft0.append(x_temp)
+            q_T = makeQ(m, N1[T_indice], N2[T_indice]) 
+            x_temp =  np.dot(List_x_vector_aft0[-1], makeQexp(q_T, T - time_boundaries[T_indice]))
+            List_x_vector_aft0.append(x_temp)
+    List_x_vector = List_x_vector_beft0 + List_x_vector_aft0
+    return List_x_vector
+'''        
 def makeQpropagator_beft0(init_vector, T_indice, time_boundaries, N1, N2, m, t0): 
 #Make a list of Qpropagator before split time T e.g.[Q1, Q1*Q2, Q1*Q2*Q3, ... Q1*Q2*Q3*..Qt0 etc.]
 #    List_Qpropagator = []
@@ -160,18 +203,18 @@ def makeQpropagator_aft0(init_vector, Qpropagator_t0, T_indice, time_boundaries,
             x_temp =  np.dot(x_temp, makeQexp(q_T, T - time_boundaries[T_indice]))
             List_x_vector.append(x_temp)
     return List_x_vector
-
+'''
 #Compute TMRCA distribution with DYNAMIC population size and t0. 
-def computeTMRCA_t0_DynamicN(List_x_vector_beft0, List_x_vector_aft0, time_boundaries, N1, N2, NA, T, m, t, t0, init_vector):
+def computeTMRCA_t0_DynamicN(List_x_vector, time_boundaries, N1, N2, NA, T, m, t, t0, init_vector):
     x_0 = init_vector
     T_indice = bisect.bisect_right(time_boundaries, T)-1
     t_indice = bisect.bisect_right(time_boundaries, t)-1
     t0_indice = bisect.bisect_right(time_boundaries, t0)-1
     if t <= t0:
-        x_t = np.dot(List_x_vector_beft0[t_indice], makeQexp(makeQ_0(N1[t_indice], N2[t_indice]), t-time_boundaries[t_indice]))
+        x_t = np.dot(List_x_vector[t_indice], makeQexp(makeQ_0(N1[t_indice], N2[t_indice]), t-time_boundaries[t_indice]))
         p = x_t[0]/(2. * N1[t_indice]) + x_t[2]/(2. * N2[t_indice])
     elif t < T:
-        x_t = np.dot(List_x_vector_aft0[t_indice-t0_indice], makeQexp(makeQ(m, N1[t_indice], N2[t_indice]), t-time_boundaries[t_indice]))
+        x_t = np.dot(List_x_vector[t_indice+1], makeQexp(makeQ(m, N1[t_indice], N2[t_indice]), t-time_boundaries[t_indice]))
         p = x_t[0]/(2. * N1[t_indice]) + x_t[2]/(2. * N2[t_indice])
     else:
         x_T = List_x_vector_aft0[-1]
@@ -249,9 +292,8 @@ def Chi_Square_Mstopt0_DynamicN(Params,Tbounds, T_indice, time_boundaries, times
     Chi_Square = []
     for lambda_index, init_vector in zip([0, 1, 2], [[1,0,0,0,0],[0,1,0,0,0],[0,0,1,0,0]]):
         chi_square = 0
-        List_x_vector_beft0, Qpropagator_t0 = makeQpropagator_beft0(init_vector, T_indice, time_boundaries, N1, N2, m, t0)
-        List_x_vector_aft0 = makeQpropagator_aft0(init_vector, Qpropagator_t0, T_indice, time_boundaries, N1, N2, m, t0, T)
-        computedTMRCAdist = [computeTMRCA_t0_DynamicN(List_x_vector_beft0, List_x_vector_aft0, time_boundaries, N1, N2, NA, T, m, t, t0, init_vector) for t in times]
+        List_x_vector = makeQpropagator_xvector(init_vector, T_indice, time_boundaries, N1, N2, m, t0)
+        computedTMRCAdist = [computeTMRCA_t0_DynamicN(List_x_vector, time_boundaries, N1, N2, NA, T, m, t, t0, init_vector) for t in times]
         for i in range(len(times)):
             if realTMRCA[lambda_index][i] == 0:
 #                continue
