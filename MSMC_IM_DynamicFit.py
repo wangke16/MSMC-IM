@@ -27,8 +27,9 @@ left_boundaries = [k[0] for k in time_lr_boundaries]
 time_boundaries = [k[0] for k in time_lr_boundaries]
 time_boundaries.append(time_boundaries[-1] * 4) #time_boundaries = all left_boundaries plus the last right time boundary.
 if args.Ti_MSMC:
-    T_i = [(k[0]+k[1])/2 for k in time_lr_boundaries[:-1]]
-    T_i.append(time_lr_boundaries[-1][0]*2.5) 
+    T_i = [k[0] for k in time_lr_boundaries[:-1]]
+    #T_i = [(k[0]+k[1])/2 for k in time_lr_boundaries[:-1]]
+    #T_i.append(time_lr_boundaries[-1][0]*2.5) 
 else:
     T_i = [-math.log(1 - i/args.n_T) * 2 * args.N0 for i in range(args.n_T)] 
 
