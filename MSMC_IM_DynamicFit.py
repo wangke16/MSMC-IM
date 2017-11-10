@@ -5,6 +5,7 @@ import argparse
 import math
 import bisect
 import numpy as np
+import matplotlib.pyplot as plt
 from multiprocessing import Pool, Process
 from scipy.linalg import expm
 from scipy.optimize import fmin_powell
@@ -20,14 +21,15 @@ parser.add_argument("-m", default=10e-5, type=float, help="Symetric Migration ra
 parser.add_argument("--Ti_MSMC", default=False, action="store_true", help="whether use the same time boundaries from MSMC for fitting(recommended).")
 parser.add_argument("-n_T", default=1000, type=int, help="Number of time segments in total in fitting. Default=1000")
 parser.add_argument("-N0", default=20000, type=float, help="Average effective population size. Default=20000") 
+parser.add_argument("--plot", default=False, action="store_true", help="Plot the inferred paramerters in pdf file(recommended). Otherwise, print out inferred parameters directly(default)")
 args = parser.parse_args()
 
-time_lr_boundaries, lambdas_11, lambdas_12, lambdas_22 = MSMC_IM_funcs.read_lambdas_from_MSMC(args.Input) #time_lr_boundaries=[[left1,right1], [left2,right2], [] ... []]
+time_lr_boundaries, lambdas_11, lambdas_12, lambdas_22 = MSMC_IM_funcs.read_lambdas_from_MSMC(args.Input) #time_lr_boundaries=[[left1,right1], [left2,right2], []... []]
 left_boundaries = [k[0] for k in time_lr_boundaries] 
 time_boundaries = [k[0] for k in time_lr_boundaries]
 time_boundaries.append(time_boundaries[-1] * 4) #time_boundaries = all left_boundaries plus the last right time boundary.
 if args.Ti_MSMC:
-    T_i = [k[0] for k in time_lr_boundaries[:-1]]
+    T_i = np.copy(time_boundaries)
     #T_i = [(k[0]+k[1])/2 for k in time_lr_boundaries[:-1]]
     #T_i.append(time_lr_boundaries[-1][0]*2.5) 
 else:
@@ -75,7 +77,7 @@ for T_indice in range(len(left_boundaries)):
     All_best_params.append(Scaled_Params)
     All_Init_chisquare.append(init_chisquare)
     All_Final_chisquare.append(final_chisquare)
-'''
+
 ###RUN fmin_powell minimization in parallel instead of in a for loop to SPEED UP
 def loop_minimization(T_indice):
     if T_indice < len(time_boundaries):
@@ -123,15 +125,15 @@ All_T_prior=[]
 All_best_params=[]
 #for T_indice in range(len(left_boundaries)):  #len(left_boundaries) is the total number of time intervals
 if True:
-    T_indice=1
+    T_indice=13
     Tbounds = [time_boundaries[T_indice], time_boundaries[T_indice+1]] 
     T_prior = (Tbounds[0]+Tbounds[1])/2
     t0_prior = (Tbounds[0]+Tbounds[1])/4
     par_list=[[math.log(args.N1)]*(T_indice+1), [math.log(args.N2)]*(T_indice+1), [math.log(args.NA)]*(len(left_boundaries)-T_indice), [10000*math.atanh(2e3*args.m-1)], [math.log(t0_prior)]]
     init_params = [value for sublist in par_list for value in sublist]
-    init_chisquare = MSMC_IM_funcs.scaled_chi_square_Mstopt0_DynamicN(init_params, Tbounds, T_indice, left_boundaries, T_i, realTMRCA)
-    Scaled_Params = fmin_powell(MSMC_IM_funcs.scaled_chi_square_Mstopt0_DynamicN, init_params, args=(Tbounds, T_indice, left_boundaries, T_i, realTMRCA), xtol=1e-4, ftol=1e-6)
-    final_chisquare = MSMC_IM_funcs.scaled_chi_square_Mstopt0_DynamicN(Scaled_Params, Tbounds, T_indice, left_boundaries, T_i, realTMRCA)
+    init_chisquare = MSMC_IM_funcs.scaled_chi_square_Mstopt0_DynamicN(init_params, T_prior, T_indice, left_boundaries, T_i, realTMRCA)
+    Scaled_Params = fmin_powell(MSMC_IM_funcs.scaled_chi_square_Mstopt0_DynamicN, init_params, args=(T_prior, T_indice, left_boundaries, T_i, realTMRCA), xtol=1e-4, ftol=1e-8)
+    final_chisquare = MSMC_IM_funcs.scaled_chi_square_Mstopt0_DynamicN(Scaled_Params, T_prior, T_indice, left_boundaries, T_i, realTMRCA)
 ##    print(T_indice, t0_prior, T_prior, Tbounds, init_chisquare, final_chisquare)
     All_T_prior.append(T_prior)
     All_best_params.append(Scaled_Params)
@@ -142,23 +144,57 @@ best_T_indice=T_indice; Best_Scaled_Params=Scaled_Params
 '''
 best_T_indice=All_Final_chisquare.index(min(All_Final_chisquare))
 Best_Scaled_Params=All_best_params[best_T_indice]
-
+'''
 N1_List = [math.exp(n1) for n1 in Best_Scaled_Params[:best_T_indice+1]]
 N2_List = [math.exp(n2) for n2 in Best_Scaled_Params[best_T_indice+1: 2*best_T_indice+2]]
 NA_List = [math.exp(na) for na in Best_Scaled_Params[2*best_T_indice+2: -2]]
+T = All_T_prior[best_T_indice]
+m = (math.tanh(Best_Scaled_Params[-2]/10000)+1)/2e3
+t0 = math.exp(Best_Scaled_Params[-1])
+t0_indice = bisect.bisect_right(time_boundaries, t0)-1
 
-print("T_indice:{}".format(best_T_indice),
-    "N1:{}".format(N1_List),
-    "N2:{}".format(N2_List),
-    "NA:{}".format(NA_List),
-    "m:{}".format((math.tanh(Best_Scaled_Params[-2]/10000)+1)/2e3), 
-    "t0:{}".format(math.exp(Best_Scaled_Params[-1])), sep="\n")
+if not args.plot: #OUTPUT FORMAT -- INFERRED PARAMETERS
+    print(#"T_indice:{}".format(best_T_indice),
+    #    "N1:{}".format(N1_List),
+    #    "N2:{}".format(N2_List),
+    #    "NA:{}".format(NA_List),
+        "T:{}".format(T),
+        "m:{}".format(m), 
+        "t0:{}".format(t0), sep="\n")
+        
+    print("time_index", "left_time_boundary", "right_time_boundary", "N1", "N2", "NA", sep="\t")#, "Init-Chi-Square", "Final-Chi-Square", sep="\t")
+    for i in range(len(left_boundaries)):
+        if i < best_T_indice:
+            print(i, time_boundaries[i], time_boundaries[i+1], N1_List[i], N2_List[i], "NA", sep="\t")#, All_Init_chisquare[i], All_Final_chisquare[i], sep="\t")
+        elif i ==  best_T_indice:
+            print(i, time_boundaries[i], All_T_prior[i], N1_List[i], N2_List[i], "NA", sep="\t")
+            print(i, All_T_prior[i], time_boundaries[i+1], N1_List[i], N2_List[i], NA_List[i-best_T_indice], sep="\t")#,  All_Init_chisquare[i], All_Final_chisquare[i], sep="\t")
+        elif i > best_T_indice:
+            print(i, time_boundaries[i], time_boundaries[i+1], "NA", "NA", NA_List[i-best_T_indice], sep="\t")#, All_Init_chisquare[i], All_Final_chisquare[i], sep="\t")
+else: #OUTPUT FORMAT -- PDF FILE
+    lambda00, lambda01, lambda11 = cal_coalescence_rate_bytmrca(T_i, N1_List, N2_List, NA_List, m, t0, T, t0_indice, best_T_indice)    
+    plt.figure(figsize=(30,20))
+    plt.subplot(311)
+    plt.plot(time_boundaries[:best_T_indice+1], N1_List, label='Population 1', drawstyle='steps', c='red')
+    plt.plot(time_boundaries[:best_T_indice+1], N2_List, label='Population 2',drawstyle='steps', c='blue')
+    plt.plot(time_boundaries[best_T_indice:], NA_List, label='Ancestral Population', drawstyle='steps', c='black')
+    plt.figtext(28, 18, '"T:{}".format(All_T_prior[best_T_indice])')
+    plt.figtext(28, 18, '"m:{}".format((math.tanh(Best_Scaled_Params[-2]/10000)+1)/2e3)')
+    plt.figtext(28, 18, '"t0:{}".format(math.exp(Best_Scaled_Params[-1]))')
+    plt.xlabel("Generations ago")
+    plt.ylabel("Population Sizes")
+    plt.subplot(312)
+    plt.plot(time_boundaries[:-1], lambda00, label='Within Population 1', drawstyle='steps', c='red')
+    plt.plot(time_boundaries[:-1], lambda01, label='Within Population 2',drawstyle='steps', c='blue')
+    plt.plot(time_boundaries[:-1], lambda11, label='Cross Pop1 and Pop2', drawstyle='steps', c='green')
+    plt.xlabel("Generations ago")
+    plt.ylabel("coalescence rate")
+    plt.subplot(313)
+    plt.plot(time_boundaries[:-1], lambda01 * 2 / (lambda00 + lambda11), drawstyle='steps', c='black')
+    plt.xlabel("Generations ago")
+    plt.ylabel("relative cross-coalescence rate")
+    plt.legend()
+    plt.savefig("MSMC-IM.pdf")
 
-print("time_index", "left_time_boundary", "right_time_boundary", "N1", "N2", "NA", sep="\t")#, "mid_T", "Init-Chi-Square", "Final-Chi-Square", sep="\t")
-for i in range(len(left_boundaries)):
-    if i < best_T_indice:
-        print(i, time_boundaries[i], time_boundaries[i+1], N1_List[i], N2_List[i], "NA", sep="\t")#, All_T_prior[i], All_Init_chisquare[i], All_Final_chisquare[i], sep="\t")
-    elif i ==  best_T_indice:
-        print(i, time_boundaries[i], time_boundaries[i+1], N1_List[i], N2_List[i], NA_List[i-best_T_indice], sep="\t")#,  All_T_prior[i], All_Init_chisquare[i], All_Final_chisquare[i], sep="\t")
-    elif i > best_T_indice:
-        print(i, time_boundaries[i], time_boundaries[i+1], "NA", "NA", NA_List[i-best_T_indice], sep="\t")#, All_T_prior[i], All_Init_chisquare[i], All_Final_chisquare[i], sep="\t")
+
+
