@@ -39,7 +39,7 @@ realTMRCA = np.array((realTMRCA_11, realTMRCA_12, realTMRCA_22))
 
 if args.noMig:
     init_params = np.array([math.log(args.N1), math.log(args.N2), math.log(args.NA), math.log(args.T)])
-    Scaled_Params = fmin_powell(MSMC_IM_funcs.scaled_chi_square, init_params, args=(T_i, realTMRCA), xtol=1e-4, ftol=1e-8)
+    Scaled_Params = fmin_powell(MSMC_IM_funcs.scaled_chi_square, init_params, args=(T_i, realTMRCA), xtol=1e-4, ftol=1e-2)
     init_chisquare = MSMC_IM_funcs.scaled_chi_square(init_params, T_i, realTMRCA)
     final_chisquare = MSMC_IM_funcs.scaled_chi_square(Scaled_Params, T_i, realTMRCA)
     print("initial chi square value is", init_chisquare,"Final chi square value is", final_chisquare)
@@ -48,9 +48,21 @@ if args.noMig:
 else:
     init_params = np.array([math.log(args.N1), math.log(args.N2), math.log(args.NA), math.log(args.T),10000*math.atanh(2e3*args.m-1), math.log(args.t0)])
     init_chisquare = MSMC_IM_funcs.scaled_chi_square_Mstopt0(init_params, T_i, realTMRCA)
-    Scaled_Params = fmin_powell(MSMC_IM_funcs.scaled_chi_square_Mstopt0, init_params, args=(T_i, realTMRCA), xtol=1e-4, ftol=1e-8)
+    Scaled_Params = fmin_powell(MSMC_IM_funcs.scaled_chi_square_Mstopt0, init_params, args=(T_i, realTMRCA), xtol=1e-4, ftol=1e-2)
     final_chisquare = MSMC_IM_funcs.scaled_chi_square_Mstopt0(Scaled_Params, T_i, realTMRCA)
     m = (math.tanh(Scaled_Params[4]/10000)+1)/2e3
     print("initial chi square value is", init_chisquare,"Final chi square value is", final_chisquare)
     print("N1", "N2", "NA", "T", "m", "t0", sep="\t")
     print(math.exp(Scaled_Params[0]), math.exp(Scaled_Params[1]), math.exp(Scaled_Params[2]), math.exp(Scaled_Params[3]), m, math.exp(Scaled_Params[5]), sep="\t")
+    # The following commands use the new concept of T with delta_t_m
+    # init_params = np.array([math.log(args.N1), math.log(args.N2), math.log(args.NA), math.log(args.T), 1/args.m])
+    # init_chisquare = MSMC_IM_funcs.scaled_chi_square_Mstopt0_2(init_params, T_i, realTMRCA)
+    # Scaled_Params = fmin_powell(MSMC_IM_funcs.scaled_chi_square_Mstopt0_2, init_params, args=(T_i, realTMRCA), xtol=1e-4, ftol=1e-2)
+    # final_chisquare = MSMC_IM_funcs.scaled_chi_square_Mstopt0_2(Scaled_Params, T_i, realTMRCA)
+    # m = 1/Scaled_Params[-1]
+    # t0 = math.exp(Scaled_Params[3]) - Scaled_Params[-1]
+    # T = math.exp(Scaled_Params[3]) - Scaled_Params[-1]/2
+    # print("initial chi square value is", init_chisquare,"Final chi square value is", final_chisquare)
+    # print("N1", "N2", "NA", "T", "m", "t0", sep="\t")
+    # print(math.exp(Scaled_Params[0]), math.exp(Scaled_Params[1]), math.exp(Scaled_Params[2]), T, m, t0, sep="\t")
+    
