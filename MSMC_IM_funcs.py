@@ -149,6 +149,43 @@ def makeQpropagator_xvector(x_0, time_boundaries, N1, N2, m, t0, T, t0_index, T_
         List_x_vector.append(x_temp)
     return List_x_vector
 
+def makeQpropagator_xvector_mlist(x_0, time_boundaries, N1, N2, m, t0, T, t0_index, T_index): 
+    #Here migration rate m is read as a list instead of a constant value, corresponding to our continuous/dynamic migration rate model   
+    List_x_vector = [np.asarray(x_0)]
+    for i in range(t0_index):
+        q = makeQ_0(N1[i], N2[i])
+        q_exm = makeQexp(q, time_boundaries[i+1]-time_boundaries[i])
+        x_vector = np.dot(List_x_vector[i-1], q_exm)
+        List_x_vector.append(x_vector)
+        
+    if t0 == time_boundaries[t0_index]: #t0 can only be >=time_boundaries[t0_index] (of course t0 < time_boundaries[t0_index+1])
+        x_t0 = List_x_vector[-1]
+    else:
+        q_t0 = makeQ_0(N1[t0_index], N2[t0_index]) #Calculate matrix before t0 thus without migration 
+        q_exm = makeQexp(q_t0, t0-time_boundaries[t0_index]) #Here is the Qpropagator at t0
+        x_t0 =  np.dot(List_x_vector[-1], q_exm)
+
+    if T_index == t0_index: #T_index can only be >= t0_index because T must >=t0. 
+        if T == t0:
+            List_x_vector.append(x_t0)
+        else: 
+            q_T = makeQ(m[0], N1[T_index], N2[T_index])
+            x_T = np.dot(x_t0, makeQexp(q_T, T-t0))
+            List_x_vector.append(x_T)
+    else:
+        q_t0_prime = makeQ(m[0], N1[t0_index], N2[t0_index]) #Calculate matrix after t0 thus with migration
+        x_temp = np.dot(x_t0, makeQexp(q_t0_prime, time_boundaries[t0_index+1]-t0)) 
+        List_x_vector.append(x_temp)
+        for j in range(t0_index+1, T_index):
+            print(len(m), j, T_index, t0_index)
+            q = makeQ(m[j - t0_index], N1[j], N2[j])
+            x_temp = np.dot(List_x_vector[-1], makeQexp(q, time_boundaries[j+1]-time_boundaries[j]))
+            List_x_vector.append(x_temp)
+        q_T = makeQ(m[-1], N1[T_index], N2[T_index]) 
+        x_temp =  np.dot(List_x_vector[-1], makeQexp(q_T, T - time_boundaries[T_index]))
+        List_x_vector.append(x_temp)
+    return List_x_vector
+
 '''        
 def makeQpropagator_beft0(init_vector, T_index, time_boundaries, N1, N2, m, t0): 
 #Make a list of Qpropagator before split time T e.g.[Q1, Q1*Q2, Q1*Q2*Q3, ... Q1*Q2*Q3*..Qt0 etc.]
@@ -241,11 +278,19 @@ def computeTMRCA_t0_DynamicN_caltbound(t, List_x_vector, time_boundaries, N1, N2
     return p
 
 def F_computeTMRCA_t0_DynamicN_caltbound(t, List_x_vector, time_boundaries, N1, N2, NA, T, T_index): #Antiderivative function of P(tMRCA)
-    F_t, err = integrate.quad(computeTMRCA_t0_DynamicN_caltbound, 0, t, args=(List_x_vector, time_boundaries, N1, N2, NA, T, T_index), limit=1000)
+    if t <= T:
+        F_t, err = integrate.quad(computeTMRCA_t0_DynamicN_caltbound, 0, t, args=(List_x_vector, time_boundaries, N1, N2, NA, T, T_index), limit=1000)
+    else:
+        F_t, err = integrate.quad(computeTMRCA_t0_DynamicN_caltbound, 0, t, args=(List_x_vector, time_boundaries, N1, N2, NA, T, T_index), limit=1000, points=[0,T])
     return F_t, err
     
 def cal_tmrca_IM(x_0, time_boundaries, N1, N2, NA, m, t0, T, t0_index, T_index, times):
     List_x_vector = makeQpropagator_xvector(x_0, time_boundaries, N1, N2, m, t0, T, t0_index, T_index)
+    tmrca_dist = [computeTMRCA_t0_DynamicN_caltbound(t, List_x_vector, time_boundaries, N1, N2, NA, T, T_index) for t in times]
+    return tmrca_dist
+    
+def cal_tmrca_IM_mlist(x_0, time_boundaries, N1, N2, NA, m, t0, T, t0_index, T_index, times):
+    List_x_vector = makeQpropagator_xvector_mlist(x_0, time_boundaries, N1, N2, m, t0, T, t0_index, T_index)
     tmrca_dist = [computeTMRCA_t0_DynamicN_caltbound(t, List_x_vector, time_boundaries, N1, N2, NA, T, T_index) for t in times]
     return tmrca_dist
                  
@@ -302,6 +347,7 @@ def scaled_chi_square_Mstopt0(Params, times, realTMRCA):
     return chi_square_score
 
 def Chi_Square_Mstopt0_2(Params, times, realTMRCA):
+    #Use the concept of delta_t_m and a different concept of T_D
     N1, N2, NA, T, delta_t_m = Params
     m = 1/delta_t_m
     t0 = T - delta_t_m
@@ -320,6 +366,7 @@ def Chi_Square_Mstopt0_2(Params, times, realTMRCA):
     return total_chi_square
     
 def scaled_chi_square_Mstopt0_2(Params, times, realTMRCA):
+    #Use the concept of delta_t_m and a different concept of T_D
     N1_, N2_, NA_, T_, delta_t_m = Params
     if N1_ > 11 or N2_ > 11 or NA_ > 11 or N1_ <= 0 or N2_ <= 0 or NA_ <= 0 or delta_t_m <= 10:
         chi_square_score = 1e100
@@ -399,8 +446,47 @@ def scaled_chi_square_Mstopt0_DynamicN(Params, T_, T_index, time_boundaries, tim
         unscale_pars = [value for sublist in unscale_list for value in sublist]
         chi_square_score = Chi_Square_Mstopt0_DynamicN(unscale_pars, T_, T_index, time_boundaries, times, realTMRCA)
     return chi_square_score
+    
+def Chi_Square_Mstopt0_DynamicN_mlist(Params, T, T_index, time_boundaries, times, realTMRCA):
+    #Here migration rate m is read as a list instead of a constant value, corresponding to our continuous/dynamic migration rate model   
+    N1 = Params[0:T_index+1]
+    N2 = Params[T_index+1: 2*T_index+2]
+    NA = Params[2*T_index+2: (len(time_boundaries))+T_index + 2]
+    m = Params[(len(time_boundaries))+T_index+2:-1]
+    t0 = Params[-1]
+    t0_index = bisect.bisect_right(time_boundaries, t0) - 1
+    Chi_Square = []
+    for lambda_index, x_0 in zip([0, 1, 2], [[1,0,0,0,0],[0,1,0,0,0],[0,0,1,0,0]]):
+        chi_square = 0
+        computedTMRCA = cal_tmrca_IM_mlist(x_0, time_boundaries, N1, N2, NA, m, t0, T, t0_index, T_index, times)
+        for i in range(len(times)):
+            if realTMRCA[lambda_index][i] == 0:
+#                continue
+                realTMRCA[lambda_index][i] = 1e-20
+            if math.isnan(computedTMRCA[i]):
+                raise Exception("Theoretical tMRCA distribtuion is not a number")
+            chi_square+=(realTMRCA[lambda_index][i]-computedTMRCA[i])**2/realTMRCA[lambda_index][i]
+        Chi_Square.append(chi_square)
+    total_chi_square = sum(Chi_Square)
+    return total_chi_square
+
+def scaled_chi_square_Mstopt0_DynamicN_mlist(Params, T_, T_index, time_boundaries, times, realTMRCA, scale):
+    #Here migration rate m is read as a list instead of a constant value, corresponding to our continuous/dynamic migration rate model   
+    N1_ = Params[:T_index+1]
+    N2_ = Params[T_index+1: 2*T_index+2]
+    NA_ = Params[2*T_index+2: len(time_boundaries)+T_index+2]
+    m_ = Params[len(time_boundaries)+T_index+2:-1]
+    t0_ = Params[-1]
+    if max(N1_) > 11 or max(N2_) > 11 or max(NA_) > 11 or min(N1_) <= 0 or min(N2_) <= 0 or min(NA_) <= 0 or t0_ > math.log(T_) or t0_ < 0:
+        chi_square_score = 1e100
+    else:
+        unscale_list = [[math.exp(n1) for n1 in N1_], [math.exp(n2) for n2 in N2_], [math.exp(na) for na in NA_], [(math.tanh(m/10000)+1)/2*scale for m in m_], [math.exp(Params[-1])]]
+        unscale_pars = [value for sublist in unscale_list for value in sublist]
+        chi_square_score = Chi_Square_Mstopt0_DynamicN_mlist(unscale_pars, T_, T_index, time_boundaries, times, realTMRCA)
+    return chi_square_score
 
 def Chi_Square_Mstopt0_DynamicN_2(Params, T, T_index, time_boundaries, times, realTMRCA):
+    #Use the concept of delta_t_m and a different concept of T_D
     N1 = Params[0:T_index+1]
     N2 = Params[T_index+1: 2*T_index+2]
     NA = Params[2*T_index+2: (len(time_boundaries)) + T_index + 2]
@@ -427,6 +513,7 @@ def Chi_Square_Mstopt0_DynamicN_2(Params, T, T_index, time_boundaries, times, re
     return total_chi_square
     
 def scaled_chi_square_Mstopt0_DynamicN_2(Params, T_, T_index, time_boundaries, times, realTMRCA):
+    #Use the concept of delta_t_m and a different concept of T_D
     N1_ = Params[0:T_index+1]
     N2_ = Params[T_index+1: 2*T_index+2]
     NA_ = Params[2*T_index+2: (len(time_boundaries)) + T_index + 2]
