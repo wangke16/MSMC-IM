@@ -41,6 +41,7 @@ parser_chisq.add_argument('Input', help='Output file from MSMC')
 parser_opt = subparsers.add_parser('opt', parents=[parent_parser], help='Save the plot of inferred parameters in the same directory where Input is by default')
 parser_opt.add_argument('Input', help='Output file from MSMC')
 parser_opt.add_argument('-Max_m', default=0.001, type=float, help="Maximum migration rates allowed per generation in the optimazition. Default=0.001,")
+parser_opt.add_argument('-beta', default=0.05, type=float, help="Test for the approporiate value as pelty value")
 parser_opt.add_argument('--noMig', default=False, action="store_true", help="Option of turning off migration completely")
 parser_opt.add_argument('--xlog', default=False, action="store_true", help="Plot in log scale on x-axis")
 #parser_opt.add_argument('--tmrca_csv', default=False, action="store_true", help="Print out tmrca distribution for sanity check. Default=False")
@@ -156,22 +157,20 @@ elif args.subcommand == 'opt':
             Tbounds = [left_boundaries[T_index], left_boundaries[T_index+1]]
         else:
             Tbounds = [left_boundaries[T_index], left_boundaries[T_index] * 4]
-        T_prior = (Tbounds[0]+Tbounds[1])/2
-        t0_prior = (Tbounds[0]+Tbounds[1])/4
-        t0_index = bisect.bisect_right(left_boundaries, t0_prior) - 1       
+        T_prior = (Tbounds[0]+Tbounds[1])/2    
         if args.noMig:                    
             par_list=[[math.log(args.N1)]*(T_index+1), [math.log(args.N2)]*(T_index+1), [math.log(args.NA)]*(len(left_boundaries)-T_index)]
             init_params = [value for sublist in par_list for value in sublist]
             init_chisquare = MSMC_IM_funcs.scaled_chi_square_DynamicN(init_params, T_prior, T_index, left_boundaries, T_i, realTMRCA)
-            Scaled_Params = fmin_powell(MSMC_IM_funcs.scaled_chi_square_DynamicN, init_params, args=(T_prior, T_index, left_boundaries, T_i, realTMRCA), xtol=1e-4, ftol=1e-2)
+            Scaled_Params = fmin_powell(MSMC_IM_funcs.scaled_chi_square_DynamicN, init_params, args=(T_prior, T_index, left_boundaries, T_i, realTMRCA), disp=0, xtol=1e-4, ftol=1e-2)
             final_chisquare = MSMC_IM_funcs.scaled_chi_square_DynamicN(Scaled_Params, T_prior, T_index, left_boundaries, T_i, realTMRCA)
             #print(init_params, Scaled_Params, init_chisquare, final_chisquare)        
         else:
-            par_list=[[math.log(args.N1)]*(T_index+1), [math.log(args.N2)]*(T_index+1), [math.log(args.NA)]*(len(left_boundaries)-T_index), [args.m]*(T_index-t0_index+1), [math.log(t0_prior)]]
+            par_list=[[math.log(args.N1)]*(T_index+1), [math.log(args.N2)]*(T_index+1), [math.log(args.NA)]*(len(left_boundaries)-T_index), [args.m]*(T_index+1)]
             init_params = [value for sublist in par_list for value in sublist]
-            init_chisquare = MSMC_IM_funcs.scaled_chi_square_Mstopt0_DynamicN_mlist(init_params, T_prior, T_index, left_boundaries, T_i, realTMRCA, scale)
-            Scaled_Params = fmin_powell(MSMC_IM_funcs.scaled_chi_square_Mstopt0_DynamicN_mlist, init_params, args=(T_prior, T_index, left_boundaries, T_i, realTMRCA, scale), xtol=1e-4, ftol=1e-2)
-            final_chisquare = MSMC_IM_funcs.scaled_chi_square_Mstopt0_DynamicN_mlist(Scaled_Params, T_prior, T_index, left_boundaries, T_i, realTMRCA, scale)
+            init_chisquare = MSMC_IM_funcs.scaled_chi_square_Mstopt0_DynamicN_mlist(init_params, args.beta, T_prior, T_index, left_boundaries, T_i, realTMRCA, scale)
+            Scaled_Params = fmin_powell(MSMC_IM_funcs.scaled_chi_square_Mstopt0_DynamicN_mlist, init_params, args=(args.beta, T_prior, T_index, left_boundaries, T_i, realTMRCA, scale), disp=0, xtol=1e-4, ftol=1e-2)
+            final_chisquare = MSMC_IM_funcs.scaled_chi_square_Mstopt0_DynamicN_mlist(Scaled_Params, args.beta, T_prior, T_index, left_boundaries, T_i, realTMRCA, scale)
         All_T_prior.append(T_prior)
         All_best_params.append(Scaled_Params)
         All_Init_chisquare.append(init_chisquare)
@@ -187,7 +186,7 @@ elif args.subcommand == 'opt':
     NA_List = [math.exp(na) for na in Best_Scaled_Params[2*best_T_index+2: len(left_boundaries)+best_T_index+2]]
     T = (left_boundaries[best_T_index] + left_boundaries[best_T_index+1]) / 2
     if not args.noMig:   
-        m_list = [(math.tanh(m/10000)+1)/scale for m in Best_Scaled_Params[len(left_boundaries)+best_T_index+2:-1]]
+        m_list = [(math.tanh(m/10000)+1)/scale for m in Best_Scaled_Params[len(left_boundaries)+best_T_index+2:]]
         t0 = math.exp(Best_Scaled_Params[-1])
         t0_index = bisect.bisect_right(left_boundaries, t0)-1
     else:
@@ -204,20 +203,20 @@ elif args.subcommand == 'opt':
                 "m:{}".format(m_list),
                 "T:{}".format(T),
                 "t0:{}".format(t0), sep="\n")
-            print("time_index", "left_time_boundary", "right_time_boundary", "N1", "N2", "NA", "m", sep="\t")
+            print("time_index", "left_time_boundary", "right_time_boundary", "N1", "N2", "NA", sep="\t")
             for i in range(len(left_boundaries)):
                 if i < t0_index:
-                    print(i, left_boundaries[i], left_boundaries[i+1], N1_List[i], N2_List[i], "NA", "0", sep="\t")
+                    print(i, left_boundaries[i], left_boundaries[i+1], N1_List[i], N2_List[i], "NA", sep="\t")
                 elif i < best_T_index:
-                    print(i, left_boundaries[i], left_boundaries[i+1], N1_List[i], N2_List[i], "NA", m[i-t0_index], sep="\t")
+                    print(i, left_boundaries[i], left_boundaries[i+1], N1_List[i], N2_List[i], "NA", sep="\t")
                 elif i ==  best_T_index:
-                    print(i, left_boundaries[i], T, N1_List[i], N2_List[i], "NA", m[i-t0_index], sep="\t")
-                    print(i, T, left_boundaries[i+1], "NA", "NA", NA_List[i-best_T_index], "NA", sep="\t")
+                    print(i, left_boundaries[i], T, N1_List[i], N2_List[i], "NA", sep="\t")
+                    print(i, T, left_boundaries[i+1], "NA", "NA", NA_List[i-best_T_index], sep="\t")
                 elif i > best_T_index:
                     if not i == len(left_boundaries) - 1:
-                        print(i, left_boundaries[i], left_boundaries[i+1], "NA", "NA", NA_List[i-best_T_index], "NA", sep="\t")
+                        print(i, left_boundaries[i], left_boundaries[i+1], "NA", "NA", NA_List[i-best_T_index], sep="\t")
                     else:
-                        print(i, left_boundaries[i], left_boundaries[i] * 4, "NA", "NA", NA_List[i-best_T_index], "NA", sep="\t")
+                        print(i, left_boundaries[i], left_boundaries[i] * 4, "NA", "NA", NA_List[i-best_T_index], sep="\t")
             if args.lambdas_csv:   
                 Lambdas = []
                 times = np.copy(left_boundaries)
@@ -227,10 +226,10 @@ elif args.subcommand == 'opt':
                 computedTMRCA = []
                 for x_0 in [[1,0,0,0,0], [0,1,0,0,0], [0,0,1,0,0]]:
                     Err = []
-                    Integral = []
+                    Integral = [] 
                     P_tMRCA = []
                     Lambda_t = []
-                    List_x_vector = MSMC_IM_funcs.makeQpropagator_xvector_mlist(x_0, left_boundaries, N1_List, N2_List, m, t0, T, t0_index, best_T_index)
+                    List_x_vector = MSMC_IM_funcs.makeQpropagator_xvector_mlist(x_0, left_boundaries, N1_List, N2_List, m_list, T, best_T_index)
                     for t in times:    
                         Integ, err = MSMC_IM_funcs.F_computeTMRCA_t0_DynamicN_caltbound(t, List_x_vector, left_boundaries, N1_List, N2_List, NA_List, T, best_T_index)
                         Integral.append(Integ)
@@ -244,13 +243,15 @@ elif args.subcommand == 'opt':
                     Integrals.append(Integral)
                     Integral_errs.append(Err)
                 lambda00, lambda01, lambda11 = Lambdas
+                relativeCCR = [lambda_01 * 2 / (lambda_00 + lambda_11) for lambda_00, lambda_01, lambda_11 in zip(lambda00, lambda01, lambda11)]
                 
-                Filename='/MSMC_IM_DynamitcFit.'+os.path.basename(args.Input)
-                sys.stdout = open(os.path.dirname(args.Input)+Filename+'.allinfor.txt', "w")
+                #Filename='/MSMC_IM_DynamitcFit.'+os.path.basename(args.Input)
+                #sys.stdout = open(os.path.dirname(args.Input)+Filename+'.allinfor.txt', "w")
                 total_chi_square = []
                 for realtmrca, computedtmrca in zip(realTMRCA, computedTMRCA):
                     chi_square = sum([(realtmrca[i]-computedtmrca[i])**2/realtmrca[i] for i in range(len(T_i))])
                     total_chi_square.append(chi_square)
+                print("#######################################")       
                 print("Given input parameters, the difference measured by chi-square between IM-modelled tMRCA and MSMC-modelled tMRCA is {}".format(sum(total_chi_square)))
                 print("Chi_square_00:{}".format(total_chi_square[0]), "Chi_square_01:{}".format(total_chi_square[1]), "Chi_square_11:{}".format(total_chi_square[2]), "correspondingly")
                 print("#######################################")             

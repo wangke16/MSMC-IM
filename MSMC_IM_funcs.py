@@ -149,8 +149,11 @@ def makeQpropagator_xvector(x_0, time_boundaries, N1, N2, m, t0, T, t0_index, T_
         List_x_vector.append(x_temp)
     return List_x_vector
 
-def makeQpropagator_xvector_mlist(x_0, time_boundaries, N1, N2, m, t0, T, t0_index, T_index): 
+def makeQpropagator_xvector_mlist(x_0, time_boundaries, N1, N2, m, T, T_index): 
     #Here migration rate m is read as a list instead of a constant value, corresponding to our continuous/dynamic migration rate model   
+    #The following two lines artificially force t0 and t0_index to be 0 instead of read in as a variable
+    t0 = 0
+    t0_index = 0
     List_x_vector = [np.asarray(x_0)]
     for i in range(t0_index):
         q = makeQ_0(N1[i], N2[i])
@@ -177,7 +180,6 @@ def makeQpropagator_xvector_mlist(x_0, time_boundaries, N1, N2, m, t0, T, t0_ind
         x_temp = np.dot(x_t0, makeQexp(q_t0_prime, time_boundaries[t0_index+1]-t0)) 
         List_x_vector.append(x_temp)
         for j in range(t0_index+1, T_index):
-            print(len(m), j, T_index, t0_index)
             q = makeQ(m[j - t0_index], N1[j], N2[j])
             x_temp = np.dot(List_x_vector[-1], makeQexp(q, time_boundaries[j+1]-time_boundaries[j]))
             List_x_vector.append(x_temp)
@@ -290,7 +292,7 @@ def cal_tmrca_IM(x_0, time_boundaries, N1, N2, NA, m, t0, T, t0_index, T_index, 
     return tmrca_dist
     
 def cal_tmrca_IM_mlist(x_0, time_boundaries, N1, N2, NA, m, t0, T, t0_index, T_index, times):
-    List_x_vector = makeQpropagator_xvector_mlist(x_0, time_boundaries, N1, N2, m, t0, T, t0_index, T_index)
+    List_x_vector = makeQpropagator_xvector_mlist(x_0, time_boundaries, N1, N2, m, T, T_index)
     tmrca_dist = [computeTMRCA_t0_DynamicN_caltbound(t, List_x_vector, time_boundaries, N1, N2, NA, T, T_index) for t in times]
     return tmrca_dist
                  
@@ -447,14 +449,15 @@ def scaled_chi_square_Mstopt0_DynamicN(Params, T_, T_index, time_boundaries, tim
         chi_square_score = Chi_Square_Mstopt0_DynamicN(unscale_pars, T_, T_index, time_boundaries, times, realTMRCA)
     return chi_square_score
     
-def Chi_Square_Mstopt0_DynamicN_mlist(Params, T, T_index, time_boundaries, times, realTMRCA):
+def Chi_Square_Mstopt0_DynamicN_mlist(Params, beta, T, T_index, time_boundaries, times, realTMRCA):
     #Here migration rate m is read as a list instead of a constant value, corresponding to our continuous/dynamic migration rate model   
     N1 = Params[0:T_index+1]
     N2 = Params[T_index+1: 2*T_index+2]
     NA = Params[2*T_index+2: (len(time_boundaries))+T_index + 2]
-    m = Params[(len(time_boundaries))+T_index+2:-1]
-    t0 = Params[-1]
-    t0_index = bisect.bisect_right(time_boundaries, t0) - 1
+    m = Params[(len(time_boundaries))+T_index+2:]
+    #Artificially force t0 and t0_index to be 0 instead of read in as a variable
+    t0 = 0
+    t0_index = 0
     Chi_Square = []
     for lambda_index, x_0 in zip([0, 1, 2], [[1,0,0,0,0],[0,1,0,0,0],[0,0,1,0,0]]):
         chi_square = 0
@@ -467,22 +470,24 @@ def Chi_Square_Mstopt0_DynamicN_mlist(Params, T, T_index, time_boundaries, times
                 raise Exception("Theoretical tMRCA distribtuion is not a number")
             chi_square+=(realTMRCA[lambda_index][i]-computedTMRCA[i])**2/realTMRCA[lambda_index][i]
         Chi_Square.append(chi_square)
-    total_chi_square = sum(Chi_Square)
+#    total_chi_square = sum(Chi_Square) 
+    total_chi_square = sum(Chi_Square) + beta * sum(m) #Penalty here
+#    total_chi_square = sum(Chi_Square) + beta * sum([m_**2 for m_ in m])
     return total_chi_square
 
-def scaled_chi_square_Mstopt0_DynamicN_mlist(Params, T_, T_index, time_boundaries, times, realTMRCA, scale):
+def scaled_chi_square_Mstopt0_DynamicN_mlist(Params, beta, T_, T_index, time_boundaries, times, realTMRCA, scale):
     #Here migration rate m is read as a list instead of a constant value, corresponding to our continuous/dynamic migration rate model   
     N1_ = Params[:T_index+1]
     N2_ = Params[T_index+1: 2*T_index+2]
     NA_ = Params[2*T_index+2: len(time_boundaries)+T_index+2]
-    m_ = Params[len(time_boundaries)+T_index+2:-1]
-    t0_ = Params[-1]
-    if max(N1_) > 11 or max(N2_) > 11 or max(NA_) > 11 or min(N1_) <= 0 or min(N2_) <= 0 or min(NA_) <= 0 or t0_ > math.log(T_) or t0_ < 0:
+    m_ = Params[len(time_boundaries)+T_index+2:]
+    #if max(N1_) > 11 or max(N2_) > 11 or max(NA_) > 11 or min(N1_) <= 0 or min(N2_) <= 0 or min(NA_) <= 0 or t0_ > math.log(T_) or t0_ < 0:
+    if max(N1_) > 11 or max(N2_) > 11 or max(NA_) > 11 or min(N1_) <= 0 or min(N2_) <= 0 or min(NA_) <= 0:
         chi_square_score = 1e100
     else:
-        unscale_list = [[math.exp(n1) for n1 in N1_], [math.exp(n2) for n2 in N2_], [math.exp(na) for na in NA_], [(math.tanh(m/10000)+1)/2*scale for m in m_], [math.exp(Params[-1])]]
+        unscale_list = [[math.exp(n1) for n1 in N1_], [math.exp(n2) for n2 in N2_], [math.exp(na) for na in NA_], [(math.tanh(m/10000)+1)/2*scale for m in m_]]
         unscale_pars = [value for sublist in unscale_list for value in sublist]
-        chi_square_score = Chi_Square_Mstopt0_DynamicN_mlist(unscale_pars, T_, T_index, time_boundaries, times, realTMRCA)
+        chi_square_score = Chi_Square_Mstopt0_DynamicN_mlist(unscale_pars, beta, T_, T_index, time_boundaries, times, realTMRCA)
     return chi_square_score
 
 def Chi_Square_Mstopt0_DynamicN_2(Params, T, T_index, time_boundaries, times, realTMRCA):
