@@ -5,9 +5,9 @@ import bisect
 import numpy as np
 from numpy import linalg as LA
 from scipy import integrate
+from scipy.stats import entropy
 from scipy.linalg import expm
 from scipy.linalg import expm2
-from scipy.optimize import fmin_powell
 
 def read_lambdas_from_MSMC(fn, mu=1.25e-08): #fn should be the combined msmc output with six columns inlcuding lambda_11, lambda_12, lambda_22. 
     time_boundaries = []
@@ -21,7 +21,7 @@ def read_lambdas_from_MSMC(fn, mu=1.25e-08): #fn should be the combined msmc out
 #        i = int(fields[0]) #The first column in msmc output is time index
         tLeft = float(fields[1]) / mu
         tRight = float(fields[2]) / mu
-        lambda_11_ = float(fields[3]) * mu 
+        lambda_11_ = float(fields[3]) * mu
         lambda_12_ = float(fields[4]) * mu
         lambda_22_ = float(fields[5]) * mu
         time_boundaries.append((tLeft, tRight))
@@ -54,10 +54,25 @@ def read_tmrcadist_from_MSMC(T_i, left_boundaries, lambdas): #Find the TMRCA at 
             tmrca = lambda_ * math.exp(-integ)
         tmrca_dist.append(tmrca)
     return tmrca_dist
+
+def read_tmrca_from_MSMC(t, left_boundaries, lambdas): #Find the TMRCA at a certain time point (T_i) from MSMC output!! 
+    left_index = bisect.bisect_right(left_boundaries, t) - 1  #left_index -- the nearest time boundary at time t
+    tleft = left_boundaries[left_index]
+    lambda_ = lambdas[left_index] #the value of lambda at the time point 't'
+    if left_index==0:
+        delta = t - tleft
+        integ = delta * lambdas[0]
+        tmrca = lambda_ * math.exp(-integ)
+    else:
+        deltas = [left_boundaries[j+1] - left_boundaries[j] for j in range(left_index)] #all time intervals in time t
+        deltas.append(t - tleft)
+        integ = sum(delta * lambda_prime for delta, lambda_prime in zip(deltas, lambdas[:left_index+1]))
+        tmrca = lambda_ * math.exp(-integ)
+    return tmrca
     
 def makeQ(m, N1, N2): #The matrix includes migration. The sum of each row is 0 in the matrix
      q = np.matrix([
-         [-(2*m+1/(2*N1)), 2*m, 0, 1 / (2*N1), 0],
+         [-(2*m+1/(2*N1)), 2*m, 0, 1/(2*N1), 0],
          [m, -(m+m), m, 0, 0],
          [0, 2*m, -(2*m+1/(2*N2)), 0 , 1/(2*N2)],
          [0, 0, 0, -m, m],
@@ -72,7 +87,25 @@ def makeQ_0(N1, N2): #The matrix when migration is 0 (symmetric migrations stop 
          [0, 0, 0, 0, 0],
          [0, 0, 0, 0, 0]])
      return q
-     
+
+def makeQ_uniM1(m, N1, N2):
+     q = np.matrix([
+         [-(2*m+1/(2*N1)), 2*m, 0, 1/(2*N1), 0],
+         [0, -m, m, 0, 0],
+         [0, 0, 0, 0, 0],
+         [0, 0, 0, -m, m],
+         [0, 0, 0, 0, 0]])
+     return q   
+
+def makeQ_uniM2(m, N1, N2):
+     q = np.matrix([
+         [0, 0, 0, 0, 0],
+         [m, -m, 0, 0, 0],
+         [0, 2*m, -(2*m+1/(2*N2)), 0 , 1/(2*N2)],
+         [0, 0, 0, 0, 0],
+         [0, 0, 0, m, -m]])
+     return q 
+
 # def makeQexp(qMatrix, t): #Make matrix exponential during timw interval delta_t. TIP: expm, expm2, expm3 give results in numpy.array format.
 #    qexp = expm(qMatrix*t)
 #    return qexp
@@ -149,44 +182,126 @@ def makeQpropagator_xvector(x_0, time_boundaries, N1, N2, m, t0, T, t0_index, T_
         List_x_vector.append(x_temp)
     return List_x_vector
 
-def makeQpropagator_xvector_mlist(x_0, time_boundaries, N1, N2, m, T, T_index): 
+def makeQpropagator_xvector_mlist(x_0, time_boundaries, N1, N2, m): 
     #Here migration rate m is read as a list instead of a constant value, corresponding to our continuous/dynamic migration rate model   
     #The following two lines artificially force t0 and t0_index to be 0 instead of read in as a variable
-    t0 = 0
-    t0_index = 0
+    x_temp = x_0
     List_x_vector = [np.asarray(x_0)]
-    for i in range(t0_index):
-        q = makeQ_0(N1[i], N2[i])
-        q_exm = makeQexp(q, time_boundaries[i+1]-time_boundaries[i])
-        x_vector = np.dot(List_x_vector[i-1], q_exm)
-        List_x_vector.append(x_vector)
-        
-    if t0 == time_boundaries[t0_index]: #t0 can only be >=time_boundaries[t0_index] (of course t0 < time_boundaries[t0_index+1])
-        x_t0 = List_x_vector[-1]
-    else:
-        q_t0 = makeQ_0(N1[t0_index], N2[t0_index]) #Calculate matrix before t0 thus without migration 
-        q_exm = makeQexp(q_t0, t0-time_boundaries[t0_index]) #Here is the Qpropagator at t0
-        x_t0 =  np.dot(List_x_vector[-1], q_exm)
-
-    if T_index == t0_index: #T_index can only be >= t0_index because T must >=t0. 
-        if T == t0:
-            List_x_vector.append(x_t0)
-        else: 
-            q_T = makeQ(m[0], N1[T_index], N2[T_index])
-            x_T = np.dot(x_t0, makeQexp(q_T, T-t0))
-            List_x_vector.append(x_T)
-    else:
-        q_t0_prime = makeQ(m[0], N1[t0_index], N2[t0_index]) #Calculate matrix after t0 thus with migration
-        x_temp = np.dot(x_t0, makeQexp(q_t0_prime, time_boundaries[t0_index+1]-t0)) 
-        List_x_vector.append(x_temp)
-        for j in range(t0_index+1, T_index):
-            q = makeQ(m[j - t0_index], N1[j], N2[j])
-            x_temp = np.dot(List_x_vector[-1], makeQexp(q, time_boundaries[j+1]-time_boundaries[j]))
-            List_x_vector.append(x_temp)
-        q_T = makeQ(m[-1], N1[T_index], N2[T_index]) 
-        x_temp =  np.dot(List_x_vector[-1], makeQexp(q_T, T - time_boundaries[T_index]))
+    for i in range(1,len(time_boundaries)):
+    #     if i <12: # 12 is a artificial number here i specfity which is the t_index when symmetric migrations stop
+    #         q = makeQ(m[i], N1[i], N2[i])
+    #     else:
+    #         q = makeQ_uniM1(m[i], N1[i], N2[i])
+        q = makeQ_uniM2(m[i], N1[i], N2[i])
+        x_temp = np.dot(x_temp, makeQexp(q, time_boundaries[i]-time_boundaries[i-1]))
         List_x_vector.append(x_temp)
     return List_x_vector
+
+def computeTMRCA_t0_DynamicN_caltbound_mlist(t, List_x_vector, time_boundaries, N1, N2):
+    t_index = bisect.bisect_right(time_boundaries, t) - 1
+    x_t = List_x_vector[t_index]
+    p = x_t[0]/(2. * N1[t_index]) + x_t[2]/(2. * N2[t_index])
+    return p
+    
+def cal_tmrca_IM_mlist(x_0, time_boundaries, N1, N2, m, times):
+    List_x_vector = makeQpropagator_xvector_mlist(x_0, time_boundaries, N1, N2, m)
+    tmrca_dist = [computeTMRCA_t0_DynamicN_caltbound_mlist(t, List_x_vector, time_boundaries, N1, N2) for t in times]
+    return tmrca_dist
+
+def F_computeTMRCA_t0_DynamicN_caltbound_mlist(t, List_x_vector, time_boundaries, N1, N2): #Antiderivative function of P(tMRCA)
+    F_t, err = integrate.quad(computeTMRCA_t0_DynamicN_caltbound_mlist, 0, t, args=(List_x_vector, time_boundaries, N1, N2), limit=1000)
+    return F_t, err
+
+def cal_coalescence_rate_bytmrca_mlist(t, List_x_vector, time_boundaries, N1, N2): 
+    #Hazard Function: cross_lambda = P(tmrca)/(1-F(tmrca)) where F(tmrca) is the Antiderivative of P(tmrca)
+    P_t = computeTMRCA_t0_DynamicN_caltbound_mlist(t, List_x_vector, time_boundaries, N1, N2)
+    F_t, err = F_computeTMRCA_t0_DynamicN_caltbound_mlist(t, List_x_vector, time_boundaries, N1, N2)
+    lambda_t = P_t / (1 - F_t)   
+    return lambda_t
+
+def Chi_Square_Mstopt0_DynamicN_mlist(Params, beta, time_boundaries, times, realTMRCA):
+    length = len(time_boundaries)
+    N1 = Params[0:length]
+    N2 = Params[length: 2*length]
+    m = Params[2*length:]
+    Chi_Square = []
+    for lambda_index, x_0 in zip([0, 1, 2], [[1,0,0,0,0],[0,1,0,0,0],[0,0,1,0,0]]):
+        chi_square = 0
+        computedTMRCA = cal_tmrca_IM_mlist(x_0, time_boundaries, N1, N2, m, times)
+        for i in range(len(times)):
+            if realTMRCA[lambda_index][i] == 0:
+#                continue
+                realTMRCA[lambda_index][i] = 1e-20
+            if math.isnan(computedTMRCA[i]):
+                raise Exception("Theoretical tMRCA distribtuion is not a number")
+            chi_square+=(realTMRCA[lambda_index][i]-computedTMRCA[i])**2/realTMRCA[lambda_index][i]
+        Chi_Square.append(chi_square)
+    total_chi_square = sum(Chi_Square) 
+#    total_chi_square = sum(Chi_Square) + beta * sum(m) #Penalty here
+#    total_chi_square = sum(Chi_Square) + beta * sum([m_**2 for m_ in m]) #Penalty here
+    return total_chi_square
+
+def scaled_chi_square_Mstopt0_DynamicN_mlist(Params, beta, time_boundaries, times, realTMRCA, scale):
+    #Here migration rate m is read as a list instead of a constant value, corresponding to our continuous/dynamic migration rate model   
+    length = len(time_boundaries)
+    #print(Params[:5], Params[length:length+5], Params[2*length:2*length+5])
+    N1_ = Params[:length]
+    N2_ = Params[length: 2*length]
+    m_ = Params[2*length:]
+    if max(N1_) > 11 or max(N2_) > 11 or min(N1_) <= 0 or min(N2_) <= 0:
+        chi_square_score = 1e100
+    else:
+        unscale_list = [[math.exp(n1) for n1 in N1_], [math.exp(n2) for n2 in N2_], [(math.tanh(m)+1)/2*scale for m in m_]]
+        unscale_pars = [value for sublist in unscale_list for value in sublist]
+        chi_square_score = Chi_Square_Mstopt0_DynamicN_mlist(unscale_pars, beta, time_boundaries, times, realTMRCA)
+    return chi_square_score
+
+def KL_Part1(t, time_boundaries, lambdas):
+    P_tRMCA_MSMC = read_tmrca_from_MSMC(t, time_boundaries, lambdas)
+    if P_tRMCA_MSMC != 0:
+        ConstantFunc = P_tRMCA_MSMC * math.log(P_tRMCA_MSMC,10)
+    else:
+        ConstantFunc = 0
+    return ConstantFunc
+
+def KL_Part2(t, x_0, time_boundaries, N1, N2, m, lambdas):
+    List_x_vector = makeQpropagator_xvector_mlist(x_0, time_boundaries, N1, N2, m)   
+    P_tRMCA_IM = computeTMRCA_t0_DynamicN_caltbound_mlist(t, List_x_vector, time_boundaries, N1, N2)
+    if P_tRMCA_IM !=0:
+        LogLfunc = read_tmrca_from_MSMC(t, time_boundaries, lambdas) * math.log(P_tRMCA_IM, 10)
+    else:
+        LogLfunc = 0
+    return LogLfunc
+
+def Kullback_Leibler(Params, time_boundaires, lambdas, scale):
+    length = len(time_boundaries)
+    N1_ = Params[:length]
+    N2_ = Params[length: 2*length]
+    m_ = Params[2*length:]
+    N1 = [math.exp(n1) for n1 in N1_] #Unscaled params
+    N2 = [math.exp(n2) for n2 in N2_] #Unscaled params
+    m = [(math.tanh(m_0)+1)/2*scale for m_) in m_] #Unscaled params
+    if max(N1) > 80000 or max(N2) > 80000 or m <= 0:
+        LogLikelihhod = 1e100
+    else:
+        Total_KL = 0
+        for x_0 in [[1,0,0,0,0], [0,1,0,0,0], [0,0,1,0,0]]:
+            KL = integrate.quad(KL_Part1, 0, np.Inf, args=(time_boundaries, lambdas), limit=1000) - integrate.quad(KL_Part2, 0, np.Inf, args=(x_0, time_boundaries, N1, N2, m, lambdas), limit=1000)
+            Total_KL = Total_KL + KL
+    return Total_KL 
+
+# def LogLikelihood(Params, time_boundaries, realTMRCA, times): #realTRMCA, computedTMRCA should be equal-length lists (If so Discrete Distribution...Not correct)
+#     length = len(time_boundaries)
+#     N1 = Params[0:length]
+#     N2 = Params[length: 2*length]
+#     m = Params[2*length:]
+#     computedTMRCA = []
+#     for x_0 in zip([[1,0,0,0,0],[0,1,0,0,0],[0,0,1,0,0]]):
+#         computedTMRCA_ = cal_tmrca_IM_mlist(x_0, time_boundaries, N1, N2, m, times)
+#         computedTMRCA.append(computedTMRCA_)
+#     KL = entropy(realTMRCA[0], computedTMRCA)[0]) #With two arguments: S = sum(pk * log(pk / qk), axis=0). Compute Kullback-Leibler divergence
+#     LogL = KL + entropy(realTMRCA[0]) #With only realTMRCA as argument: S = -sum(pk * log(pk), axis=0)
+#     return LogL
 
 '''        
 def makeQpropagator_beft0(init_vector, T_index, time_boundaries, N1, N2, m, t0): 
@@ -288,11 +403,6 @@ def F_computeTMRCA_t0_DynamicN_caltbound(t, List_x_vector, time_boundaries, N1, 
     
 def cal_tmrca_IM(x_0, time_boundaries, N1, N2, NA, m, t0, T, t0_index, T_index, times):
     List_x_vector = makeQpropagator_xvector(x_0, time_boundaries, N1, N2, m, t0, T, t0_index, T_index)
-    tmrca_dist = [computeTMRCA_t0_DynamicN_caltbound(t, List_x_vector, time_boundaries, N1, N2, NA, T, T_index) for t in times]
-    return tmrca_dist
-    
-def cal_tmrca_IM_mlist(x_0, time_boundaries, N1, N2, NA, m, t0, T, t0_index, T_index, times):
-    List_x_vector = makeQpropagator_xvector_mlist(x_0, time_boundaries, N1, N2, m, T, T_index)
     tmrca_dist = [computeTMRCA_t0_DynamicN_caltbound(t, List_x_vector, time_boundaries, N1, N2, NA, T, T_index) for t in times]
     return tmrca_dist
                  
@@ -449,47 +559,6 @@ def scaled_chi_square_Mstopt0_DynamicN(Params, T_, T_index, time_boundaries, tim
         chi_square_score = Chi_Square_Mstopt0_DynamicN(unscale_pars, T_, T_index, time_boundaries, times, realTMRCA)
     return chi_square_score
     
-def Chi_Square_Mstopt0_DynamicN_mlist(Params, beta, T, T_index, time_boundaries, times, realTMRCA):
-    #Here migration rate m is read as a list instead of a constant value, corresponding to our continuous/dynamic migration rate model   
-    N1 = Params[0:T_index+1]
-    N2 = Params[T_index+1: 2*T_index+2]
-    NA = Params[2*T_index+2: (len(time_boundaries))+T_index + 2]
-    m = Params[(len(time_boundaries))+T_index+2:]
-    #Artificially force t0 and t0_index to be 0 instead of read in as a variable
-    t0 = 0
-    t0_index = 0
-    Chi_Square = []
-    for lambda_index, x_0 in zip([0, 1, 2], [[1,0,0,0,0],[0,1,0,0,0],[0,0,1,0,0]]):
-        chi_square = 0
-        computedTMRCA = cal_tmrca_IM_mlist(x_0, time_boundaries, N1, N2, NA, m, t0, T, t0_index, T_index, times)
-        for i in range(len(times)):
-            if realTMRCA[lambda_index][i] == 0:
-#                continue
-                realTMRCA[lambda_index][i] = 1e-20
-            if math.isnan(computedTMRCA[i]):
-                raise Exception("Theoretical tMRCA distribtuion is not a number")
-            chi_square+=(realTMRCA[lambda_index][i]-computedTMRCA[i])**2/realTMRCA[lambda_index][i]
-        Chi_Square.append(chi_square)
-#    total_chi_square = sum(Chi_Square) 
-    total_chi_square = sum(Chi_Square) + beta * sum(m) #Penalty here
-#    total_chi_square = sum(Chi_Square) + beta * sum([m_**2 for m_ in m])
-    return total_chi_square
-
-def scaled_chi_square_Mstopt0_DynamicN_mlist(Params, beta, T_, T_index, time_boundaries, times, realTMRCA, scale):
-    #Here migration rate m is read as a list instead of a constant value, corresponding to our continuous/dynamic migration rate model   
-    N1_ = Params[:T_index+1]
-    N2_ = Params[T_index+1: 2*T_index+2]
-    NA_ = Params[2*T_index+2: len(time_boundaries)+T_index+2]
-    m_ = Params[len(time_boundaries)+T_index+2:]
-    #if max(N1_) > 11 or max(N2_) > 11 or max(NA_) > 11 or min(N1_) <= 0 or min(N2_) <= 0 or min(NA_) <= 0 or t0_ > math.log(T_) or t0_ < 0:
-    if max(N1_) > 11 or max(N2_) > 11 or max(NA_) > 11 or min(N1_) <= 0 or min(N2_) <= 0 or min(NA_) <= 0:
-        chi_square_score = 1e100
-    else:
-        unscale_list = [[math.exp(n1) for n1 in N1_], [math.exp(n2) for n2 in N2_], [math.exp(na) for na in NA_], [(math.tanh(m/10000)+1)/2*scale for m in m_]]
-        unscale_pars = [value for sublist in unscale_list for value in sublist]
-        chi_square_score = Chi_Square_Mstopt0_DynamicN_mlist(unscale_pars, beta, T_, T_index, time_boundaries, times, realTMRCA)
-    return chi_square_score
-
 def Chi_Square_Mstopt0_DynamicN_2(Params, T, T_index, time_boundaries, times, realTMRCA):
     #Use the concept of delta_t_m and a different concept of T_D
     N1 = Params[0:T_index+1]
