@@ -5,7 +5,6 @@ import bisect
 import numpy as np
 from numpy import linalg as LA
 from scipy import integrate
-from scipy.stats import entropy
 from scipy.linalg import expm
 from scipy.linalg import expm2
 
@@ -88,6 +87,15 @@ def makeQ_0(N1, N2): #The matrix when migration is 0 (symmetric migrations stop 
          [0, 0, 0, 0, 0]])
      return q
 
+def makeQ2(m1, m2, N1, N2): #The matrix includes migration. The sum of each row is 0 in the matrix
+     q = np.matrix([
+         [-(2*m1+1/(2*N1)), 2*m1, 0, 1/(2*N1), 0],
+         [m2, -(m1+m2), m1, 0, 0],
+         [0, 2*m2, -(2*m2+1/(2*N2)), 0 , 1/(2*N2)],
+         [0, 0, 0, -m1, m1],
+         [0, 0, 0, m2, -m2]])
+     return q
+     
 def makeQ_uniM1(m, N1, N2):
      q = np.matrix([
          [-(2*m+1/(2*N1)), 2*m, 0, 1/(2*N1), 0],
@@ -192,7 +200,10 @@ def makeQpropagator_xvector_mlist(x_0, time_boundaries, N1, N2, m):
     #         q = makeQ(m[i], N1[i], N2[i])
     #     else:
     #         q = makeQ_uniM1(m[i], N1[i], N2[i])
-        q = makeQ_uniM2(m[i], N1[i], N2[i])
+        q = makeQ(m[i], N1[i], N2[i])
+#        q = makeQ_uniM1(m[i], N1[i], N2[i])
+#        q = makeQ_uniM2(m[i], N1[i], N2[i])
+#        q = makeQ2(m1[i], m2[i], N1[i], N2[i])
         x_temp = np.dot(x_temp, makeQexp(q, time_boundaries[i]-time_boundaries[i-1]))
         List_x_vector.append(x_temp)
     return List_x_vector
@@ -236,8 +247,8 @@ def Chi_Square_Mstopt0_DynamicN_mlist(Params, beta, time_boundaries, times, real
                 raise Exception("Theoretical tMRCA distribtuion is not a number")
             chi_square+=(realTMRCA[lambda_index][i]-computedTMRCA[i])**2/realTMRCA[lambda_index][i]
         Chi_Square.append(chi_square)
-    total_chi_square = sum(Chi_Square) 
-#    total_chi_square = sum(Chi_Square) + beta * sum(m) #Penalty here
+#    total_chi_square = sum(Chi_Square) 
+    total_chi_square = sum(Chi_Square) + beta * sum(m) #Penalty here
 #    total_chi_square = sum(Chi_Square) + beta * sum([m_**2 for m_ in m]) #Penalty here
     return total_chi_square
 
@@ -251,15 +262,42 @@ def scaled_chi_square_Mstopt0_DynamicN_mlist(Params, beta, time_boundaries, time
     if max(N1_) > 11 or max(N2_) > 11 or min(N1_) <= 0 or min(N2_) <= 0:
         chi_square_score = 1e100
     else:
-        unscale_list = [[math.exp(n1) for n1 in N1_], [math.exp(n2) for n2 in N2_], [(math.tanh(m)+1)/2*scale for m in m_]]
+        unscale_list = [[math.exp(n1) for n1 in N1_], [math.exp(n2) for n2 in N2_], [(math.tanh(m)+1)/(2*scale) for m in m_]]
         unscale_pars = [value for sublist in unscale_list for value in sublist]
         chi_square_score = Chi_Square_Mstopt0_DynamicN_mlist(unscale_pars, beta, time_boundaries, times, realTMRCA)
     return chi_square_score
 
+def cumulative_migproportion(time_boundaries, m): #Here m is a list whose length is consistent with the length the time_boundaries(right_boundaries, which is not start with 0)!
+    CDF = []
+    integ = 2 * m[0] * time_boundaries[0]
+    cdf = 1 - math.exp(-integ)
+    CDF.append(cdf)
+    for i in range(1,len(m)):
+        integ += 2 * m[i] * (time_boundaries[i]-time_boundaries[i-1])
+#        print(i, m[i], time_boundaries[i]-time_boundaries[i-1], integ)
+        cdf = 1 - math.exp(-integ)
+        CDF.append(cdf)
+    return CDF
+    
+def getCDFintersect(left_boundaries, right_boundaries, CDF, val):
+    xVec = [(left_time_boundary + right_time_boundary)/2 for left_time_boundary, right_time_boundary in zip(left_boundaries, right_boundaries)]
+    yVec = CDF
+    i = 0
+    if yVec[0] < val:
+        while yVec[i] < val:
+            i += 1
+        assert i > 0 and i <= len(yVec), "CDF intersection index out of bounds: {}".format(i)
+        assert yVec[i - 1] < val and yVec[i] >= val, "this should never happen"
+        intersectDistance = (val - yVec[i - 1]) / (yVec[i] - yVec[i - 1])
+        CDFintersect = xVec[i - 1] + intersectDistance * (xVec[i] - xVec[i - 1])
+    else:
+        CDFintersect = val/yVec[0] * xVec[0]
+    return CDFintersect
+
 def KL_Part1(t, time_boundaries, lambdas):
-    P_tRMCA_MSMC = read_tmrca_from_MSMC(t, time_boundaries, lambdas)
-    if P_tRMCA_MSMC != 0:
-        ConstantFunc = P_tRMCA_MSMC * math.log(P_tRMCA_MSMC,10)
+    P_tMRCA_MSMC = read_tmrca_from_MSMC(t, time_boundaries, lambdas)
+    if P_tMRCA_MSMC != 0:
+        ConstantFunc = P_tMRCA_MSMC * math.log(P_tMRCA_MSMC,10)
     else:
         ConstantFunc = 0
     return ConstantFunc
@@ -273,24 +311,30 @@ def KL_Part2(t, x_0, time_boundaries, N1, N2, m, lambdas):
         LogLfunc = 0
     return LogLfunc
 
-def Kullback_Leibler(Params, time_boundaires, lambdas, scale):
+NrIter=1
+def Kullback_Leibler(Params, time_boundaries, lambdas_00, lambdas_01, lambdas_11, scale):
+    global NrIter
     length = len(time_boundaries)
     N1_ = Params[:length]
     N2_ = Params[length: 2*length]
     m_ = Params[2*length:]
-    N1 = [math.exp(n1) for n1 in N1_] #Unscaled params
-    N2 = [math.exp(n2) for n2 in N2_] #Unscaled params
-    m = [(math.tanh(m_0)+1)/2*scale for m_) in m_] #Unscaled params
-    if max(N1) > 80000 or max(N2) > 80000 or m <= 0:
-        LogLikelihhod = 1e100
+    if max(N1_) > 11 or max(N2_) > 11 or min(N1_) <= 0 or min(N2_) <= 0 or (math.tanh(min(m_))+1)/(2*scale) <= 0:
+        Total_KL = 1e100
+        print(NrIter, Total_KL, [math.exp(n1) for n1 in N1_], [math.exp(n2) for n2 in N2_], [(math.tanh(m_0)+1)/(2*scale) for m_0 in m_], sep="\t")
     else:
+        N1 = [math.exp(n1) for n1 in N1_] #Unscaled params
+        N2 = [math.exp(n2) for n2 in N2_] #Unscaled params
+        m = [(math.tanh(m_0)+1)/(2*scale) for m_0 in m_] #Unscaled params
         Total_KL = 0
-        for x_0 in [[1,0,0,0,0], [0,1,0,0,0], [0,0,1,0,0]]:
-            KL = integrate.quad(KL_Part1, 0, np.Inf, args=(time_boundaries, lambdas), limit=1000) - integrate.quad(KL_Part2, 0, np.Inf, args=(x_0, time_boundaries, N1, N2, m, lambdas), limit=1000)
+        for lambdas, x_0 in zip([lambdas_00, lambdas_01, lambdas_11], [[1,0,0,0,0], [0,1,0,0,0], [0,0,1,0,0]]):
+            KL = integrate.quad(KL_Part1, 0, np.Inf, args=(time_boundaries, lambdas), limit=50)[0] - integrate.quad(KL_Part2, 0, np.Inf, args=(x_0, time_boundaries, N1, N2, m, lambdas), limit=50)[0]
             Total_KL = Total_KL + KL
+#        print(NrIter, Total_KL, N1, N2, m, sep="\t")
+    NrIter += 1
     return Total_KL 
 
 # def LogLikelihood(Params, time_boundaries, realTMRCA, times): #realTRMCA, computedTMRCA should be equal-length lists (If so Discrete Distribution...Not correct)
+#     from scipy.stats import entropy
 #     length = len(time_boundaries)
 #     N1 = Params[0:length]
 #     N2 = Params[length: 2*length]
