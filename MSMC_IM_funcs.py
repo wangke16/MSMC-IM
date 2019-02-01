@@ -140,7 +140,7 @@ def scaled_chi_square_Mstopt0_DynamicN_Symmlist(Params, beta, time_boundaries, t
         N1_ = N1_ + np.repeat(uniqN1[sum(segs[0:i]):sum(segs[0:i+1])], repeat[i]).tolist()
         N2_ = N2_ + np.repeat(uniqN2[sum(segs[0:i]):sum(segs[0:i+1])], repeat[i]).tolist()
         m_ = m_ + np.repeat(uniqm[sum(segs[0:i]):sum(segs[0:i+1])], repeat[i]).tolist()
-    if max(N1_) > math.log(1e7) or max(N2_) > math.log(1e7) or min(N1_) <= 0 or min(N2_) <= 0:
+    if max(N1_) > math.log(1e7) or max(N2_) > math.log(1e7) or min(N1_) <= 0 or min(N2_) <= 0 or max(m_) > math.log(100): #Setting limit for m here just to avoid overflow issue
         chi_square_score = 1e500
     else:
         unscale_list = [[math.exp(n1) for n1 in N1_], [math.exp(n2) for n2 in N2_], [math.exp(m) for m in m_]]

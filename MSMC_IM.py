@@ -31,7 +31,7 @@ args = parser.parse_args()
 if not os.path.dirname(args.o): print("output directory required")
 beta=[float(args.beta[0].split(",")[0]), float(args.beta[0].split(",")[1])]
 time_lr_boundaries, msmc_lambdas00, msmc_lambdas01, msmc_lambdas11 = MSMC_IM_funcs.read_lambdas_from_MSMC(args.Input) #time_lr_boundaries=[[left1,right1], []... []]
-msmc_rCCR = [lambda_01 * 2 / (lambda_00 + lambda_11) for lambda_00, lambda_01, lambda_11 in zip(msmc_lambdas00, msmc_lambdas01, msmc_lambdas11)]
+#msmc_rCCR = [lambda_01 * 2 / (lambda_00 + lambda_11) for lambda_00, lambda_01, lambda_11 in zip(msmc_lambdas00, msmc_lambdas01, msmc_lambdas11)]
 N1_s = [1/(2*lambda_00) for lambda_00 in msmc_lambdas00]
 N2_s = [1/(2*lambda_11) for lambda_11 in msmc_lambdas11]
 left_boundaries = [k[0] for k in time_lr_boundaries] 
@@ -48,10 +48,18 @@ for seg in args.p.strip().split('+'):
     segs.append(segs_)
 len_timesegs = sum([repeat_ * segs_ for repeat_, segs_ in zip(repeat,segs)])
 if len_timesegs != len(left_boundaries): raise Exception("Input Error! The time pattern should be consistent with MSMC")
-ln = repeat[-1] if segs[-1] == 1 else 1 #Artifically correct a few lambdas in the most right time interval(s) to lambda into the second most right time interval 
-if msmc_lambdas00[-(ln+1)] > 1.5 * min(msmc_lambdas00[-ln:]) or msmc_lambdas00[-(ln+1)] < max(msmc_lambdas00[-ln:])/1.5: msmc_lambdas00[-ln:] = [msmc_lambdas00[-(ln+1)]] * repeat[-1]
-if msmc_lambdas01[-(ln+1)] > 1.5 * min(msmc_lambdas01[-ln:]) or msmc_lambdas01[-(ln+1)] < max(msmc_lambdas01[-ln:])/1.5: msmc_lambdas01[-ln:] = [msmc_lambdas01[-(ln+1)]] * repeat[-1]
-if msmc_lambdas11[-(ln+1)] > 1.5 * min(msmc_lambdas11[-ln:]) or msmc_lambdas11[-(ln+1)] < max(msmc_lambdas11[-ln:])/1.5: msmc_lambdas11[-ln:] = [msmc_lambdas11[-(ln+1)]] * repeat[-1]
+msmc_rCCR = [lambda_01 * 2 / (lambda_00 + lambda_11) for lambda_00, lambda_01, lambda_11 in zip(msmc_lambdas00, msmc_lambdas01, msmc_lambdas11)]
+### 20181213 ### 
+# for i in list(range(len(msmc_rCCR))):
+#     if msmc_rCCR[i] >= 1:
+#         msmc_lambdas00[i:] = msmc_lambdas01[i:]
+#         msmc_lambdas11[i:] = msmc_lambdas01[i:]
+#         break
+### 20181212 ### 
+ln = repeat[-1] * segs[-1] + repeat[-2] * segs[-2] #Artifically correct lambdas in the most right time interval(s) to lambda into the second most right time interval
+if msmc_lambdas00[-(ln+1)] > 1.5 * min(msmc_lambdas00[-ln:]) or msmc_lambdas00[-(ln+1)] < max(msmc_lambdas00[-ln:])/1.5: msmc_lambdas00[-ln:] = [msmc_lambdas00[-(ln+1)]] * ln
+if msmc_lambdas01[-(ln+1)] > 1.5 * min(msmc_lambdas01[-ln:]) or msmc_lambdas01[-(ln+1)] < max(msmc_lambdas01[-ln:])/1.5: msmc_lambdas01[-ln:] = [msmc_lambdas01[-(ln+1)]] * ln
+if msmc_lambdas11[-(ln+1)] > 1.5 * min(msmc_lambdas11[-ln:]) or msmc_lambdas11[-(ln+1)] < max(msmc_lambdas11[-ln:])/1.5: msmc_lambdas11[-ln:] =[msmc_lambdas11[-(ln+1)]] * ln
 
 #msmc_lambdas01[:2]=[0] * 2 #Correct lambda01 in the first two ti me intervals into 0
 realTMRCA_00 = MSMC_IM_funcs.read_tmrcadist_from_MSMC(T_i, left_boundaries, msmc_lambdas00)
@@ -138,7 +146,8 @@ if args.printfittingdetails:
     f.write("Initial Chi-Square distance is {} and final Chi-Square distance is {}".format(init_chisquare,final_chisquare) +"\n")
     print("##############################################################################")  
     f.write("left_boundaries\tIM_lambda00\tIM_lambda01\tIM_lambda11\tIM_rCCR\tMSMC_lambda00\tMSMC_lambda01\tMSMC_lambda11\tMSMC_rCCR\tmsmc_N1\tmsmc_N2\tnaive_im_N1\tnaive_im_N2\tim_N1\tim_N2\tunc_m\n")
-    for t, OUTlambda_00, OUTlambda_01, OUTlambda_11, rCCR,  INlambda_00, INlambda_01, INlambda_11, INrCCR in zip(left_boundaries, im_lambdas00, im_lambdas01, im_lambdas11, im_rCCR, msmc_lambdas00, msmc_lambdas01, msmc_lambdas11, msmc_rCCR):
+#    f.write(str(len(left_boundaries)) +"\t"+ str(len(im_lambdas00)) +"\t"+ str(len(im_lambdas01)) +"\t"+ str(len(im_lambdas11)) +"\t"+ str(len(im_rCCR)) +"\t"+ str(len(msmc_lambdas00)) +"\t"+ str(len(msmc_lambdas01)) +"\t"+ str(len(msmc_lambdas11)) +"\t"+ str(len(msmc_rCCR))+"\t"+ str(len(N1_s))+"\t"+ str(len(N2_s))+"\t"+ str(len(N1_List))+"\t"+ str(len(N2_List))+ "\t"+ str(len(N1_List_prime)) +"\t"+ str(len(N2_List_prime)) +"\t"+ str(len(m_List))+"\n")# +"\t"+ length)
+    for t, OUTlambda_00, OUTlambda_01, OUTlambda_11, rCCR,  INlambda_00, INlambda_01, INlambda_11, INrCCR, i in zip(left_boundaries, im_lambdas00, im_lambdas01, im_lambdas11, im_rCCR, msmc_lambdas00, msmc_lambdas01, msmc_lambdas11, msmc_rCCR, list(range(len(m_List)))):
         f.write(str(t) +"\t"+ str(OUTlambda_00) +"\t"+ str(OUTlambda_01) +"\t"+ str(OUTlambda_11) +"\t"+ str(rCCR) +"\t"+ str(INlambda_00) +"\t"+ str(INlambda_01) +"\t"+ str(INlambda_11) +"\t"+ str(INrCCR) +"\t"+ str(N1_s[i]) +"\t"+ str(N2_s[i]) +"\t"+ str(N1_List[i]) +"\t"+ str(N2_List[i]) +"\t"+ str(N1_List_prime[i]) +"\t"+ str(N2_List_prime[i]) +"\t"+ str(m_List[i]) +"\n") 
     f.close() 
 #    print("left_boundaries", "Integral_IM_tRMCA_00", "Integral_Err_00", "Integral_IM_tRMCA_01", "Integral_Err_01", "Integral_IM_tRMCA_11", "Integral_Err_11", "IM_lambda00", "IM_lambda01", "IM_lambda11", "im_rCCR","IM_tMRCA_00", "IM_tMRCA_01", "IM_tMRCA_11", "MSMC_lambda00", "MSMC_lambda01", "MSMC_lambda11", "MSMC_tMRCA_00", "MSMC_tMRCA_01", "MSMC_tMRCA_11", sep="\t")
