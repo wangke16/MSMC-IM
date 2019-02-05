@@ -119,13 +119,15 @@ def Chi_Square_Mstopt0_DynamicN_Symmlist(Params, beta, time_boundaries, times, r
                 continue
             chi_square+=(realTMRCA[lambda_index][i]-computedTMRCA[i])**2/realTMRCA[lambda_index][i]
         Chi_Square.append(chi_square)
-    b1 = beta[0]
-    b2 = beta[1]
-    penalty1 = b1 * (sum([m[i]*(time_boundaries[i+1]-time_boundaries[i]) for i in range(0, length-1)]) + m[-1]*time_boundaries[-1]*3) #penalty on migrate rate in each time segment
-    penalty2 = b2 * sum([abs((n1-n2)/(n1+n2)) for n1,n2 in zip(N1,N2)]) #penalty of absolute function over (N1-N2)/(N1+N2)
-#    penalty2 = b2 * sum([((n1-n2)/(n1+n2))**2 for n1,n2 in zip(N1,N2)]) #penalty of sqaure over (N1-N2)/(N1+N2)
-    total_chi_square = sum(Chi_Square) + penalty1 + penalty2
-#    if 1 - math.exp(-2 * m[0] * time_boundaries[0]) > 0.99: total_chi_square = 1e500
+    penalty = beta * sum([abs((n1-n2)/(n1+n2)) for n1,n2 in zip(N1,N2)]) #penalty of absolute function over (N1-N2)/(N1+N2)
+    total_chi_square = sum(Chi_Square) + penalty
+#    b1 = beta[0]
+#    b2 = beta[1]
+#    penalty1 = b1 * (sum([m[i]*(time_boundaries[i+1]-time_boundaries[i]) for i in range(0, length-1)]) + m[-1]*time_boundaries[-1]*3) #penalty on migrate rate in each time segment
+#    penalty2 = b2 * sum([abs((n1-n2)/(n1+n2)) for n1,n2 in zip(N1,N2)]) #penalty of absolute function over (N1-N2)/(N1+N2)
+##    penalty2 = b2 * sum([((n1-n2)/(n1+n2))**2 for n1,n2 in zip(N1,N2)]) #penalty of sqaure over (N1-N2)/(N1+N2)
+#    total_chi_square = sum(Chi_Square) + penalty1 + penalty2
+##    if 1 - math.exp(-2 * m[0] * time_boundaries[0]) > 0.99: total_chi_square = 1e500
     return total_chi_square
 
 def scaled_chi_square_Mstopt0_DynamicN_Symmlist(Params, beta, time_boundaries, times, realTMRCA, repeat, segs):
@@ -160,8 +162,8 @@ def cumulative_Symmigproportion(time_boundaries, m): #Here m is a list whose len
         CDF.append(cdf)
     return CDF
 
-def getCDFintersect(left_boundaries, right_boundaries, CDF, val):
-    xVec = [(left_time_boundary + right_time_boundary)/2 for left_time_boundary, right_time_boundary in zip(left_boundaries, right_boundaries)]
+def getCDFintersect(left_boundaries, CDF, val):
+    xVec = left_time_boundary 
     yVec = CDF
     i = 0
     if yVec[0] < val:

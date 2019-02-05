@@ -20,7 +20,7 @@ parser.add_argument('-N1', default=15000, type=float, help='Initial constant eff
 parser.add_argument('-N2', default=15000, type=float, help='Initial constatnt effective population size of Pop2 to start fitting process. Default=15000')
 parser.add_argument('-m', default=10e-5, type=float, help='Initial symmetric migration rate between two pops to start fitting process. Default=0')
 parser.add_argument('-p', default="1*2+25*1+1*2+1*3", type=str, help='Pattern of fixed time segments [default=1*2+25*1+1*2+1*3(MSMC2)], which has to be consistent with MSMC2 or MSMC(default=10*1+15*2) output you are using here')
-parser.add_argument('--beta', nargs='+', help="Regularisation on estimated migration rate and population size. The bigger, the stronger penalty is. Recommend: 0,1e-6")
+parser.add_argument('--beta', default=1e-6, type=float, help="Regularisation on estimated population size. The bigger, the stronger penalty is. Default=1e-6")
 parser.add_argument('--printfittingdetails', default=False, action="store_true", help="Print detailed infomation during fitting process e.g. estimated split time from M(t) midpoint, initial and final Chi-Square value, estimated coalesent rates from IM model. Defaul=False")
 parser.add_argument('--plotfittingdetails', default=False, action="store_true", help="Plot IM estiamtes on m(t), M(t),popsize, coalescent rates, in contrast to MSMC estimates. Default=False")
 parser.add_argument('--xlog', default=False, action="store_true", help="Plot all parameters in log scale on x-axis. Default=False. Recommend to add this flag.")
@@ -130,15 +130,14 @@ if args.printfittingdetails:
         chi_square = sum([(realtmrca[i]-computedtmrca[i])**2/realtmrca[i] for i in range(len(T_i))])
         total_chi_square.append(chi_square)
     
-    mid_t = [(left_time_boundary + right_time_boundary)/2 for left_time_boundary, right_time_boundary in zip(left_boundaries, right_boundaries)]
     if max(CumulativeDF) >= 0.75:
-        xVec = [MSMC_IM_funcs.getCDFintersect(left_boundaries, right_boundaries, CumulativeDF, 0.25), MSMC_IM_funcs.getCDFintersect(left_boundaries, right_boundaries, CumulativeDF, 0.5), MSMC_IM_funcs.getCDFintersect(left_boundaries, right_boundaries, CumulativeDF, 0.75)]
+        xVec = [MSMC_IM_funcs.getCDFintersect(left_boundaries, CumulativeDF, 0.25), MSMC_IM_funcs.getCDFintersect(left_boundaries, CumulativeDF, 0.5), MSMC_IM_funcs.getCDFintersect(left_boundaries, CumulativeDF, 0.75)]
         yVec = [0.25, 0.5, 0.75]
     elif max(CumulativeDF) >= 0.5:
-        xVec = [MSMC_IM_funcs.getCDFintersect(left_boundaries, right_boundaries, CumulativeDF, 0.25), MSMC_IM_funcs.getCDFintersect(left_boundaries, right_boundaries, CumulativeDF, 0.5)]
+        xVec = [MSMC_IM_funcs.getCDFintersect(left_boundaries, CumulativeDF, 0.25), MSMC_IM_funcs.getCDFintersect(left_boundaries, CumulativeDF, 0.5)]
         yVec = [0.25, 0.5]
     elif max(CumulativeDF) >= 0.25:
-        xVec = [MSMC_IM_funcs.getCDFintersect(left_boundaries, right_boundaries, CumulativeDF, 0.25)]
+        xVec = [MSMC_IM_funcs.getCDFintersect(left_boundaries, CumulativeDF, 0.25)]
         yVec = [0.25]
     f = open(os.path.dirname(args.o)+'/{}.MSMC_IM.fittingdetails.txt'.format(os.path.basename(args.o)),"w")
     if max(CumulativeDF) >= 0.25:
@@ -198,7 +197,7 @@ if args.plotfittingdetails:
     plt.subplot(414)
     plot(left_boundaries, im_rCCR, '--', label='Infer:rCCR',drawstyle='steps-post', c='black')
     plot(left_boundaries, msmc_rCCR, '-.', linewidth=0.3, label='MSMC:rCCR', drawstyle='steps-post', c='black')
-    plot(mid_t, CumulativeDF, label='Infer: CDF', c='orange')
+    plot(left_boundaries, CumulativeDF, label='Infer: CDF', c='orange')
     if max(CumulativeDF) >= 0.25:
         plt.stem(xVec, yVec, linefmt=':', c='orange')
     plt.legend(prop={'size': 8})
