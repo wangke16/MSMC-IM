@@ -35,9 +35,9 @@ optional arguments:
                         consistent with MSMC2 or MSMC(default=10*1+15*2)
                         output you are using here
   --beta BETA [BETA ...]
-                        Regularisation on estimated migration rate and
-                        population size. The bigger, the stronger penalty is.
-                        Recommend: 0,1e-6
+                        Regularisation on population sizes. 
+                        The bigger, the stronger penalty is.
+                        Recommend: 1e-6
   --printfittingdetails
                         Print detailed infomation during fitting process e.g.
                         estimated split time from M(t) midpoint, initial and
@@ -52,19 +52,27 @@ optional arguments:
 ```
 You can find the example of input and output in the example filefolder. To get the output files in MSMC-IM/example/output, you need to run MSMC_IM.py using the input file Yoruba_French.8haps.combined.msmc2.final.txt by the following command line: 
 ```
-MSMC_IM.py --beta 0,1e-6 -o .git/MSMC-IM/example/output/Yoruba_French.8haps --printfittingdetails --plotfittingdetails --xlog .git/MSMC-IM/example/Yoruba_French.8haps.combined.msmc2.final.txt
+MSMC_IM.py --beta 1e-6 -o /MSMC-IM/example/output/Yoruba_French.8haps --printfittingdetails --plotfittingdetails --xlog /MSMC-IM/example/Yoruba_French.8haps.combined.msmc2.final.txt
 ```
-Penatly option ```--beta``` is always neccessary for fitting process based on our tests on world-wide popuations. 
+Penatly option ```--beta``` is always recommended while running modern human population pairs. 
 
-You always need to specify the directory and prefix of your output through ```option -o```, to generate the output ```.estimates.txt``` in the ceratin directory with your preferred prefix. ```.estimates.txt```file looks like this: 
+You need to specify the directory and prefix of your output through ```option -o```, to generate the output ```.estimates.txt``` in the ceratin directory with your preferred prefix. The time boundaries is reported in generations in our ouput (gen=29 years). Here is an example of ```.estimates.txt```file: 
 ```
-time_index	left_time_boundary	right_time_boundary	m	M
-0	0.0	69.80536	4.430565528189666e-25	0.0
-1	69.80536	158.8328	4.430565528189666e-25	0.0
-2	158.8328	272.3768	4.430565528189666e-25	0.0
-3	272.3768	417.1872	4.430565528189666e-25	0.0
-4	417.1872	601.8752000000001	4.430565528189666e-25	0.0
+left_boundaries	im_N1	im_N2	m	M
+0.0	198574.94595123047	39273.17391589546	3.9776767728370866e-25	0.0
+69.80536	198574.94595123047	39273.17391589546	3.9776767728370866e-25	0.0
+158.8328	198574.90056850316	39280.953360444604	3.9776767728370866e-25	0.0
+272.3768	57003.32828207908	62637.81824920013	3.9776767728370866e-25	0.0
+417.1872	26649.753206298024	30539.007130749862	3.9776767728370866e-25	0.0
 ...
 ```
-You have the option for printing these internally estimated parameters used in fitting and reporting through ```option --printfittingdetails```. If you would like to have a nice plot showing you how the fit looks like, you can plot these paramaters through ```option --plotfittingdetails```, and  ```option --xlog``` is always recommend. See ```.fittingdetails.txt``` and ```.fittingdetails.b10.0.b21e-06.xlog.pdf``` in the example.
- 
+You have the option for printing these internally estimated parameters while fitting through ```option --printfittingdetails```. If you would like to have a nice plot showing you how the fit looks like, you can plot these paramaters through ```option --plotfittingdetails```, and  ```option --xlog``` is always recommend. See ```.fittingdetails.txt``` and ```.fittingdetails.b10.0.b21e-06.xlog.pdf``` in the /example/output/ filefolder.
+Here is an example of ```.fittingdetails.txt```file:
+```
+left_boundaries	IM_lambda00	IM_lambda01	IM_lambda11	IM_rCCR	MSMC_lambda00	MSMC_lambda01	MSMC_lambda11	MSMC_rCCR	msmc_N1	msmc_N2	naive_im_N1	naive_im_N2	im_N1	im_N2
+0.0	2.51794101016e-06	0.0	1.27313366898e-05	0.0	2.3872624999999995e-06	3.0992375e-08	1.2872249999999997e-05	0.004062039989809636	209444.91860446855	38843.248072403825	198574.94595123047	39273.17391589546	198574.94595123047	39273.17391589546
+69.80536	2.51794104905e-06	3.53345281497e-28	1.27313417205e-05	4.63425443461e-23	2.3872624999999995e-06	3.0992375e-08	1.2872249999999997e-05	0.004062039989809636	209444.91860446855	38843.248072403825	198574.94595123047	39273.17391589546	198574.94595123047	39273.17391589546
+158.8328	2.51794168655e-06	8.03375725192e-28	1.27288313578e-05	1.05383050283e-22	2.3872624999999995e-06	2.4664625e-08	1.2872249999999997e-05	0.003232688462360774	209444.91860446855	38843.248072403825	198574.90056850316	39280.953360444604	198574.90056850316	39280.953360444604
+272.3768	8.76519248136e-06	8.63705230112e-28	7.98671961388e-06	1.03117211361e-22	9.0226575e-06	2.465625e-08	7.7467375e-06	0.0029406248704857865	55416.045660604985	64543.299679381154	57003.32828207908	62637.81824920013	57003.32828207908	62637.81824920013
+...
+```
