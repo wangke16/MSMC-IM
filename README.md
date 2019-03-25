@@ -50,9 +50,9 @@ optional arguments:
   --ylog                Plot all parameters in log scale on y-axis.
                         Default=False
 ```
-You can find the example of input and output in the example filefolder. To get the output files in MSMC-IM/example/output, you need to run MSMC_IM.py using the input file Yoruba_French.8haps.combined.msmc2.final.txt by the following command line: 
+You can find the example of input and output in the example filefolder. To get the output files in MSMC-IM/example/MSMC_IM_output, you need to run MSMC_IM.py using the input file Yoruba_French.8haps.combined.msmc2.final.txt by the following command line: 
 ```
-MSMC_IM.py --beta 1e-6 -o /MSMC-IM/example/output/Yoruba_French.8haps --printfittingdetails --plotfittingdetails --xlog /MSMC-IM/example/Yoruba_French.8haps.combined.msmc2.final.txt
+MSMC_IM.py --beta 1e-6 -o /MSMC-IM/example/MSMC_IM_output/Yoruba_French.8haps --printfittingdetails --plotfittingdetails --xlog /MSMC-IM/example/Yoruba_French.8haps.combined.msmc2.final.txt
 ```
 Penatly option ```--beta``` is always recommended while running modern human population pairs. 
 
@@ -68,7 +68,7 @@ left_boundaries	im_N1	im_N2	m	M
 ```
 Here we report M(t) evaluated at each time boundaries. As the cumulative probabiliy function of m(t), M(t) is a continuous distribtuion which can be evaluated at any given time t. ```plot_utils.py```enables you to plot M(t) at given specific time grid, simply by ```plot_utils.py -o /outdir/Yoruba_French.oranyprefix -tmax 100000 -n 100 /dir/to/Yoruba_French.estimates.txt``` to get ```/outdir/Yoruba_French.oranyprefix.plot_M_t.pdf```. 
 
-You have the option for printing these internally estimated parameters while fitting through ```option --printfittingdetails```. If you would like to have a nice plot showing you how the fit looks like, you can plot these paramaters through ```option --plotfittingdetails```, and  ```option --xlog``` is always recommend. See ```.fittingdetails.txt``` and ```.fittingdetails.b10.0.b21e-06.xlog.pdf``` in the /example/output/ filefolder. 
+You have the option for printing these internally estimated parameters while fitting through ```option --printfittingdetails```. If you would like to have a nice plot showing you how the fit looks like, you can plot these paramaters through ```option --plotfittingdetails```, and  ```option --xlog``` is always recommend. See ```.fittingdetails.txt``` and ```.fittingdetails.b21e-06.xlog.pdf``` in the /example/MSMC_IM_output/ filefolder. 
 Here is an example of ```.fittingdetails.txt```file:
 ```
 left_boundaries	IM_lambda00	IM_lambda01	IM_lambda11	IM_rCCR	MSMC_lambda00	MSMC_lambda01	MSMC_lambda11	MSMC_rCCR	msmc_N1	msmc_N2	naive_im_N1	naive_im_N2	im_N1	im_N2
