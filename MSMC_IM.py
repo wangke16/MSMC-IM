@@ -29,7 +29,8 @@ args = parser.parse_args()
 
 #print(os.path.dirname(args.o)+'/{}.MSMC_IM.estimates.txt'.format(os.path.basename(args.o)))
 if not os.path.dirname(args.o): print("output directory required")
-beta=[float(args.beta[0].split(",")[0]), float(args.beta[0].split(",")[1])]
+beta=args.beta
+#beta=[float(args.beta[0].split(",")[0]), float(args.beta[0].split(",")[1])]
 time_lr_boundaries, msmc_lambdas00, msmc_lambdas01, msmc_lambdas11 = MSMC_IM_funcs.read_lambdas_from_MSMC(args.Input) #time_lr_boundaries=[[left1,right1], []... []]
 #msmc_rCCR = [lambda_01 * 2 / (lambda_00 + lambda_11) for lambda_00, lambda_01, lambda_11 in zip(msmc_lambdas00, msmc_lambdas01, msmc_lambdas11)]
 N1_s = [1/(2*lambda_00) for lambda_00 in msmc_lambdas00]
@@ -116,12 +117,9 @@ for x_0 in [[1,0,0,0,0], [0,1,0,0,0], [0,0,1,0,0]]:
 im_lambdas00, im_lambdas01, im_lambdas11 = Lambdas
 im_rCCR = [lambda_01 * 2 / (lambda_00 + lambda_11) for lambda_00, lambda_01, lambda_11 in zip(im_lambdas00, im_lambdas01, im_lambdas11)]
 of = open(os.path.dirname(args.o)+'/{}.MSMC_IM.estimates.txt'.format(os.path.basename(args.o)),"w")
-of.write("time_index\tleft_time_boundary\tright_time_boundary\tm\tM\n")
+of.write("time_index\tleft_time_boundary\tim_N1\tim_N2\tm\tM\n")
 for i in range(len(left_boundaries)):    
-    if i != len(left_boundaries) - 1:
-        of.write(str(i) +"\t"+ str(left_boundaries[i]) +"\t"+ str(left_boundaries[i+1]) +"\t"+ str(m_List_prime[i]) +"\t"+ str(CumulativeDF[i]) +"\n") 
-    else:
-        of.write(str(i) +"\t"+ str(left_boundaries[i]) +"\t"+ str(left_boundaries[i] * 4) +"\t"+ str(m_List_prime[i]) +"\t"+ str(CumulativeDF[i]) +"\n") 
+    of.write(str(left_boundaries[i]) +"\t"+ str(N1_List[i]) +"\t"+ str(N2_List[i]) +"\t"+ str(m_List[i]) +"\t"+ str(CumulativeDF[i]) +"\n") 
 of.close()
         
 if args.printfittingdetails:
@@ -144,10 +142,10 @@ if args.printfittingdetails:
         f.write("The split time is estimated to be around {} gens (i.e. 0.25,0.5,0.75 quantile)".format(xVec) +"\n") 
     f.write("Initial Chi-Square distance is {} and final Chi-Square distance is {}".format(init_chisquare,final_chisquare) +"\n")
     print("##############################################################################")  
-    f.write("left_boundaries\tIM_lambda00\tIM_lambda01\tIM_lambda11\tIM_rCCR\tMSMC_lambda00\tMSMC_lambda01\tMSMC_lambda11\tMSMC_rCCR\tmsmc_N1\tmsmc_N2\tnaive_im_N1\tnaive_im_N2\tim_N1\tim_N2\tunc_m\n")
+    f.write("left_boundaries\tIM_lambda00\tIM_lambda01\tIM_lambda11\tIM_rCCR\tMSMC_lambda00\tMSMC_lambda01\tMSMC_lambda11\tMSMC_rCCR\tmsmc_N1\tmsmc_N2\tnaive_im_N1\tnaive_im_N2\tim_N1\tim_N2\n") #\tunc_m\n")
 #    f.write(str(len(left_boundaries)) +"\t"+ str(len(im_lambdas00)) +"\t"+ str(len(im_lambdas01)) +"\t"+ str(len(im_lambdas11)) +"\t"+ str(len(im_rCCR)) +"\t"+ str(len(msmc_lambdas00)) +"\t"+ str(len(msmc_lambdas01)) +"\t"+ str(len(msmc_lambdas11)) +"\t"+ str(len(msmc_rCCR))+"\t"+ str(len(N1_s))+"\t"+ str(len(N2_s))+"\t"+ str(len(N1_List))+"\t"+ str(len(N2_List))+ "\t"+ str(len(N1_List_prime)) +"\t"+ str(len(N2_List_prime)) +"\t"+ str(len(m_List))+"\n")# +"\t"+ length)
     for t, OUTlambda_00, OUTlambda_01, OUTlambda_11, rCCR,  INlambda_00, INlambda_01, INlambda_11, INrCCR, i in zip(left_boundaries, im_lambdas00, im_lambdas01, im_lambdas11, im_rCCR, msmc_lambdas00, msmc_lambdas01, msmc_lambdas11, msmc_rCCR, list(range(len(m_List)))):
-        f.write(str(t) +"\t"+ str(OUTlambda_00) +"\t"+ str(OUTlambda_01) +"\t"+ str(OUTlambda_11) +"\t"+ str(rCCR) +"\t"+ str(INlambda_00) +"\t"+ str(INlambda_01) +"\t"+ str(INlambda_11) +"\t"+ str(INrCCR) +"\t"+ str(N1_s[i]) +"\t"+ str(N2_s[i]) +"\t"+ str(N1_List[i]) +"\t"+ str(N2_List[i]) +"\t"+ str(N1_List_prime[i]) +"\t"+ str(N2_List_prime[i]) +"\t"+ str(m_List[i]) +"\n") 
+        f.write(str(t) +"\t"+ str(OUTlambda_00) +"\t"+ str(OUTlambda_01) +"\t"+ str(OUTlambda_11) +"\t"+ str(rCCR) +"\t"+ str(INlambda_00) +"\t"+ str(INlambda_01) +"\t"+ str(INlambda_11) +"\t"+ str(INrCCR) +"\t"+ str(N1_s[i]) +"\t"+ str(N2_s[i]) +"\t"+ str(N1_List[i]) +"\t"+ str(N2_List[i]) +"\t"+ str(N1_List_prime[i]) +"\t"+ str(N2_List_prime[i]) +"\n")  #str(m_List[i]) +"\n") 
     f.close() 
 #    print("left_boundaries", "Integral_IM_tRMCA_00", "Integral_Err_00", "Integral_IM_tRMCA_01", "Integral_Err_01", "Integral_IM_tRMCA_11", "Integral_Err_11", "IM_lambda00", "IM_lambda01", "IM_lambda11", "im_rCCR","IM_tMRCA_00", "IM_tMRCA_01", "IM_tMRCA_11", "MSMC_lambda00", "MSMC_lambda01", "MSMC_lambda11", "MSMC_tMRCA_00", "MSMC_tMRCA_01", "MSMC_tMRCA_11", sep="\t")
 #    for t, Integral_00, Integral_err_00, Integral_01, Integral_err_01, Integral_11, Integral_err_11, Plambda_00, Plambda_01, Plambda_11, rCCR, P_tMRCA00, P_tMRCA01, P_tMRCA11, Mlambda_00, Mlambda_01, Mlambda_11, MSMC_tMRCA_00, MSMC_tMRCA_01, MSMC_tMRCA_11 in zip(left_boundaries, Integrals[0], Integral_errs[0], Integrals[1], Integral_errs[1], Integrals[2], Integral_errs[2], lambda00, lambda01, lambda11, im_rCCR, computedTMRCA[0], computedTMRCA[1], computedTMRCA[2], msmc_lambdas00, msmc_lambdas01, msmc_lambdas11, realTMRCA_00, realTMRCA_01, realTMRCA_11):
@@ -155,13 +153,13 @@ if args.printfittingdetails:
 
 if args.plotfittingdetails:
     if args.xlog and args.ylog:
-        ofp=os.path.dirname(args.o)+'/{}.MSMC_IM.fittingdetails.b1{}.b2{}.xylog.pdf'.format(os.path.basename(args.o),beta[0],beta[1])
+        ofp=os.path.dirname(args.o)+'/{}.MSMC_IM.fittingdetails.b{}.xylog.pdf'.format(os.path.basename(args.o),beta)
     elif args.xlog:
-        ofp=os.path.dirname(args.o)+'/{}.MSMC_IM.fittingdetails.b1{}.b2{}.xlog.pdf'.format(os.path.basename(args.o),beta[0],beta[1])
+        ofp=os.path.dirname(args.o)+'/{}.MSMC_IM.fittingdetails.b{}.xlog.pdf'.format(os.path.basename(args.o),beta)
     elif args.ylog:
-        ofp=os.path.dirname(args.o)+'/{}.MSMC_IM.fittingdetails.b1{}.b2{}.ylog.pdf'.format(os.path.basename(args.o),beta[0],beta[1])
+        ofp=os.path.dirname(args.o)+'/{}.MSMC_IM.fittingdetails.b{}.ylog.pdf'.format(os.path.basename(args.o),beta)
     else:
-        ofp=os.path.dirname(args.o)+'/{}.MSMC_IM.fittingdetails.b1{}.b2{}.pdf'.format(os.path.basename(args.o),beta[0],beta[1])
+        ofp=os.path.dirname(args.o)+'/{}.MSMC_IM.fittingdetails.b{}.pdf'.format(os.path.basename(args.o),beta)
     plot = plt.semilogx if args.xlog else plt.plot
     plot2 = plt.loglog if args.ylog and args.xlog else plt.semilogx if args.xlog else plt.semilogy if args.ylog else plt.plot 
     plt.figure(figsize=(8,16)) 

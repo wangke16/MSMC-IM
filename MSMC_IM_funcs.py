@@ -163,7 +163,7 @@ def cumulative_Symmigproportion(time_boundaries, m): #Here m is a list whose len
     return CDF
 
 def getCDFintersect(left_boundaries, CDF, val):
-    xVec = left_time_boundary 
+    xVec = left_boundaries
     yVec = CDF
     i = 0
     if yVec[0] < val:
