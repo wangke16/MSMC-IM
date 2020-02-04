@@ -20,19 +20,16 @@ parser.add_argument('-N1', default=15000, type=float, help='Initial constant eff
 parser.add_argument('-N2', default=15000, type=float, help='Initial constatnt effective population size of Pop2 to start fitting process. Default=15000')
 parser.add_argument('-m', default=10e-5, type=float, help='Initial symmetric migration rate between two pops to start fitting process. Default=0')
 parser.add_argument('-p', default="1*2+25*1+1*2+1*3", type=str, help='Pattern of fixed time segments [default=1*2+25*1+1*2+1*3(MSMC2)], which has to be consistent with MSMC2 or MSMC(default=10*1+15*2) output you are using here')
-parser.add_argument('--beta', default=1e-6, type=float, help="Regularisation on estimated population size. The bigger, the stronger penalty is. Default=1e-6")
+parser.add_argument('-beta', default="1e-8,1e-6", type=str, help="Regularisation on estimating migration rate and population size. The bigger, the stronger penalty is. Default=1e-8,1e-6")
 parser.add_argument('--printfittingdetails', default=False, action="store_true", help="Print detailed infomation during fitting process e.g. estimated split time from M(t) midpoint, initial and final Chi-Square value, estimated coalesent rates from IM model. Defaul=False")
 parser.add_argument('--plotfittingdetails', default=False, action="store_true", help="Plot IM estiamtes on m(t), M(t),popsize, coalescent rates, in contrast to MSMC estimates. Default=False")
 parser.add_argument('--xlog', default=False, action="store_true", help="Plot all parameters in log scale on x-axis. Default=False. Recommend to add this flag.")
 parser.add_argument('--ylog', default=False, action="store_true", help="Plot all parameters in log scale on y-axis. Default=False")
 args = parser.parse_args() 
 
-#print(os.path.dirname(args.o)+'/{}.MSMC_IM.estimates.txt'.format(os.path.basename(args.o)))
 if not os.path.dirname(args.o): print("output directory required")
-beta=args.beta
-#beta=[float(args.beta[0].split(",")[0]), float(args.beta[0].split(",")[1])]
+beta=[float(args.beta.split(",")[0]), float(args.beta.split(",")[1])]
 time_lr_boundaries, msmc_lambdas00, msmc_lambdas01, msmc_lambdas11 = MSMC_IM_funcs.read_lambdas_from_MSMC(args.Input) #time_lr_boundaries=[[left1,right1], []... []]
-#msmc_rCCR = [lambda_01 * 2 / (lambda_00 + lambda_11) for lambda_00, lambda_01, lambda_11 in zip(msmc_lambdas00, msmc_lambdas01, msmc_lambdas11)]
 N1_s = [1/(2*lambda_00) for lambda_00 in msmc_lambdas00]
 N2_s = [1/(2*lambda_11) for lambda_11 in msmc_lambdas11]
 left_boundaries = [k[0] for k in time_lr_boundaries] 
@@ -50,19 +47,11 @@ for seg in args.p.strip().split('+'):
 len_timesegs = sum([repeat_ * segs_ for repeat_, segs_ in zip(repeat,segs)])
 if len_timesegs != len(left_boundaries): raise Exception("Input Error! The time pattern should be consistent with MSMC")
 msmc_rCCR = [lambda_01 * 2 / (lambda_00 + lambda_11) for lambda_00, lambda_01, lambda_11 in zip(msmc_lambdas00, msmc_lambdas01, msmc_lambdas11)]
-### 20181213 ### 
-# for i in list(range(len(msmc_rCCR))):
-#     if msmc_rCCR[i] >= 1:
-#         msmc_lambdas00[i:] = msmc_lambdas01[i:]
-#         msmc_lambdas11[i:] = msmc_lambdas01[i:]
-#         break
-### 20181212 ### 
 ln = repeat[-1] * segs[-1] + repeat[-2] * segs[-2] #Artifically correct lambdas in the most right time interval(s) to lambda into the second most right time interval
 if msmc_lambdas00[-(ln+1)] > 1.5 * min(msmc_lambdas00[-ln:]) or msmc_lambdas00[-(ln+1)] < max(msmc_lambdas00[-ln:])/1.5: msmc_lambdas00[-ln:] = [msmc_lambdas00[-(ln+1)]] * ln
 if msmc_lambdas01[-(ln+1)] > 1.5 * min(msmc_lambdas01[-ln:]) or msmc_lambdas01[-(ln+1)] < max(msmc_lambdas01[-ln:])/1.5: msmc_lambdas01[-ln:] = [msmc_lambdas01[-(ln+1)]] * ln
 if msmc_lambdas11[-(ln+1)] > 1.5 * min(msmc_lambdas11[-ln:]) or msmc_lambdas11[-(ln+1)] < max(msmc_lambdas11[-ln:])/1.5: msmc_lambdas11[-ln:] =[msmc_lambdas11[-(ln+1)]] * ln
 
-#msmc_lambdas01[:2]=[0] * 2 #Correct lambda01 in the first two ti me intervals into 0
 realTMRCA_00 = MSMC_IM_funcs.read_tmrcadist_from_MSMC(T_i, left_boundaries, msmc_lambdas00)
 realTMRCA_01 = MSMC_IM_funcs.read_tmrcadist_from_MSMC(T_i, left_boundaries, msmc_lambdas01)
 realTMRCA_11 = MSMC_IM_funcs.read_tmrcadist_from_MSMC(T_i, left_boundaries, msmc_lambdas11)
@@ -116,8 +105,9 @@ for x_0 in [[1,0,0,0,0], [0,1,0,0,0], [0,0,1,0,0]]:
     Integral_errs.append(Err)
 im_lambdas00, im_lambdas01, im_lambdas11 = Lambdas
 im_rCCR = [lambda_01 * 2 / (lambda_00 + lambda_11) for lambda_00, lambda_01, lambda_11 in zip(im_lambdas00, im_lambdas01, im_lambdas11)]
-of = open(os.path.dirname(args.o)+'/{}.MSMC_IM.estimates.txt'.format(os.path.basename(args.o)),"w")
-of.write("time_index\tleft_time_boundary\tim_N1\tim_N2\tm\tM\n")
+of = open(os.path.dirname(args.o)+'/{}.b1_{}.b2_{}.MSMC_IM.estimates.txt'.format(os.path.basename(args.o),beta[0],beta[1]),"w")
+of.write("left_time_boundary\tim_N1\tim_N2\tm\tM\n")
+
 for i in range(len(left_boundaries)):    
     of.write(str(left_boundaries[i]) +"\t"+ str(N1_List[i]) +"\t"+ str(N2_List[i]) +"\t"+ str(m_List[i]) +"\t"+ str(CumulativeDF[i]) +"\n") 
 of.close()
@@ -137,7 +127,7 @@ if args.printfittingdetails:
     elif max(CumulativeDF) >= 0.25:
         xVec = [MSMC_IM_funcs.getCDFintersect(left_boundaries, CumulativeDF, 0.25)]
         yVec = [0.25]
-    f = open(os.path.dirname(args.o)+'/{}.MSMC_IM.fittingdetails.txt'.format(os.path.basename(args.o)),"w")
+    f = open(os.path.dirname(args.o)+'/{}.b1_{}.b2_{}.MSMC_IM.fittingdetails.txt'.format(os.path.basename(args.o),beta[0],beta[1]),"w")
     if max(CumulativeDF) >= 0.25:
         f.write("The split time is estimated to be around {} gens (i.e. 0.25,0.5,0.75 quantile)".format(xVec) +"\n") 
     f.write("Initial Chi-Square distance is {} and final Chi-Square distance is {}".format(init_chisquare,final_chisquare) +"\n")
@@ -153,13 +143,13 @@ if args.printfittingdetails:
 
 if args.plotfittingdetails:
     if args.xlog and args.ylog:
-        ofp=os.path.dirname(args.o)+'/{}.MSMC_IM.fittingdetails.b{}.xylog.pdf'.format(os.path.basename(args.o),beta)
+        ofp=os.path.dirname(args.o)+'/{}.b1_{}.b2_{}.MSMC_IM.fittingdetails.xylog.pdf'.format(os.path.basename(args.o),beta[0],beta[1])
     elif args.xlog:
-        ofp=os.path.dirname(args.o)+'/{}.MSMC_IM.fittingdetails.b{}.xlog.pdf'.format(os.path.basename(args.o),beta)
+        ofp=os.path.dirname(args.o)+'/{}.b1_{}.b2_{}.MSMC_IM.fittingdetails.xlog.pdf'.format(os.path.basename(args.o),beta[0],beta[1])
     elif args.ylog:
-        ofp=os.path.dirname(args.o)+'/{}.MSMC_IM.fittingdetails.b{}.ylog.pdf'.format(os.path.basename(args.o),beta)
+        ofp=os.path.dirname(args.o)+'/{}.b1_{}.b2_{}.MSMC_IM.fittingdetails.ylog.pdf'.format(os.path.basename(args.o),beta[0],beta[1])
     else:
-        ofp=os.path.dirname(args.o)+'/{}.MSMC_IM.fittingdetails.b{}.pdf'.format(os.path.basename(args.o),beta)
+        ofp=os.path.dirname(args.o)+'/{}.b1_{}.b2_{}.MSMC_IM.fittingdetails.pdf'.format(os.path.basename(args.o),beta[0],beta[1])
     plot = plt.semilogx if args.xlog else plt.plot
     plot2 = plt.loglog if args.ylog and args.xlog else plt.semilogx if args.xlog else plt.semilogy if args.ylog else plt.plot 
     plt.figure(figsize=(8,16)) 

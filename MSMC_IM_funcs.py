@@ -119,19 +119,19 @@ def Chi_Square_Mstopt0_DynamicN_Symmlist(Params, beta, time_boundaries, times, r
                 continue
             chi_square+=(realTMRCA[lambda_index][i]-computedTMRCA[i])**2/realTMRCA[lambda_index][i]
         Chi_Square.append(chi_square)
-    penalty = beta * sum([abs((n1-n2)/(n1+n2)) for n1,n2 in zip(N1,N2)]) #penalty of absolute function over (N1-N2)/(N1+N2)
-    total_chi_square = sum(Chi_Square) + penalty
-#    b1 = beta[0]
-#    b2 = beta[1]
-#    penalty1 = b1 * (sum([m[i]*(time_boundaries[i+1]-time_boundaries[i]) for i in range(0, length-1)]) + m[-1]*time_boundaries[-1]*3) #penalty on migrate rate in each time segment
+#    penalty = beta * sum([abs((n1-n2)/(n1+n2)) for n1,n2 in zip(N1,N2)]) #penalty of absolute function over (N1-N2)/(N1+N2)
+    b1 = beta[0]
+    b2 = beta[1]
+    penalty1 = b1 * (sum([m[i]*(time_boundaries[i+1]-time_boundaries[i]) for i in range(0, length-1)]) + m[-1]*time_boundaries[-1]*3) #penalty on migrate rate in each time segment
 #    penalty2 = b2 * sum([abs((n1-n2)/(n1+n2)) for n1,n2 in zip(N1,N2)]) #penalty of absolute function over (N1-N2)/(N1+N2)
-##    penalty2 = b2 * sum([((n1-n2)/(n1+n2))**2 for n1,n2 in zip(N1,N2)]) #penalty of sqaure over (N1-N2)/(N1+N2)
-#    total_chi_square = sum(Chi_Square) + penalty1 + penalty2
+    penalty2 = b2 * sum([((n1-n2)/(n1+n2))**2 for n1,n2 in zip(N1,N2)]) #penalty of sqaure over (N1-N2)/(N1+N2)
+    total_chi_square = sum(Chi_Square) + penalty1 + penalty2
 ##    if 1 - math.exp(-2 * m[0] * time_boundaries[0]) > 0.99: total_chi_square = 1e500
+#    total_chi_square = sum(Chi_Square) + penalty
     return total_chi_square
 
 def scaled_chi_square_Mstopt0_DynamicN_Symmlist(Params, beta, time_boundaries, times, realTMRCA, repeat, segs):
-    #Here migration rate m is read as a list instead of a constant value, corresponding to our continuous/dynamic migration rate model   
+    #Here migration rate m is read as a list instead of a constant value, corresponding to our continuous/dynamic migration rate model
     N1_ = []
     N2_ = []
     m_ = []
@@ -148,6 +148,33 @@ def scaled_chi_square_Mstopt0_DynamicN_Symmlist(Params, beta, time_boundaries, t
         unscale_list = [[math.exp(n1) for n1 in N1_], [math.exp(n2) for n2 in N2_], [math.exp(m) for m in m_]]
         unscale_pars = [value for sublist in unscale_list for value in sublist]
         chi_square_score = Chi_Square_Mstopt0_DynamicN_Symmlist(unscale_pars, beta, time_boundaries, times, realTMRCA)
+    return chi_square_score
+
+def Chi_Square_Mstopt0_DynamicN_v190903(Params, N1s, N2s, time_boundaries, times, realTMRCA):
+    m = Params
+    Chi_Square = []
+    for lambda_index, x_0 in zip([0, 1, 2], [[1,0,0,0,0],[0,1,0,0,0],[0,0,1,0,0]]):
+        chi_square = 0
+        computedTMRCA = cal_tmrca_IM_Symmlist(x_0, time_boundaries, N1s, N2s, m, times)
+        for i in range(len(times)):
+            if math.isnan(computedTMRCA[i]) or realTMRCA[lambda_index][i] == 0:
+                continue
+            chi_square+=(realTMRCA[lambda_index][i]-computedTMRCA[i])**2/realTMRCA[lambda_index][i]
+        Chi_Square.append(chi_square)
+    total_chi_square = sum(Chi_Square)
+    return total_chi_square
+    
+def scaled_chi_square_Mstopt0_DynamicN_v190903(Params, N1s, N2s, time_boundaries, times, realTMRCA, repeat, segs):
+    #Here migration rate m is read as a list instead of a constant value, corresponding to our continuous/dynamic migration rate model   
+    m_ = []
+    uniqm = Params
+    for i in range(len(segs)):
+        m_ = m_ + np.repeat(uniqm[sum(segs[0:i]):sum(segs[0:i+1])], repeat[i]).tolist()
+    if max(m_) > math.log(100): #Setting limit for m here just to avoid overflow issue
+        chi_square_score = 1e500
+    else:
+        unscale_pars = [math.exp(m) for m in m_]
+        chi_square_score = Chi_Square_Mstopt0_DynamicN_v190903(unscale_pars, N1s, N2s, time_boundaries, times, realTMRCA)
     return chi_square_score
 
 def cumulative_Symmigproportion(time_boundaries, m): #Here m is a list whose length is consistent with the length the time_boundaries(right_boundaries, which is not start with 0)!
@@ -176,8 +203,6 @@ def getCDFintersect(left_boundaries, CDF, val):
     else:
         CDFintersect = val/yVec[0] * xVec[0]
     return CDFintersect
-
-
 
 ############################ Asymmetric migration mode #############################################################################################################
 
