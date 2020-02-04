@@ -8,7 +8,7 @@ The program is written in python. Python 3 is required here. To use MSMC_IM.py, 
 
 # Guidance of usage on MSMC_IM.py
 ```
-usage: MSMC_IM [-h] [-o O] [-N1 N1] [-N2 N2] [-m M] [-p P] [--beta BETA] 
+usage: MSMC_IM [-h] [-o O] [-N1 N1] [-N2 N2] [-m M] [-p P] [-beta BETA] 
                [--printfittingdetails] [--plotfittingdetails] [--xlog] 
                [--ylog]
                Input
@@ -34,9 +34,9 @@ optional arguments:
                         [default=1*2+25*1+1*2+1*3(MSMC2)], which has to be
                         consistent with MSMC2 or MSMC(default=10*1+15*2)
                         output you are using here
-  --beta BETA           Regularisation on population sizes. 
+  -beta BETA           Regularisation on estimating migration rat and population sizes. 
                         The bigger, the stronger penalty is.
-                        Recommend: 1e-6
+                        Recommend: 1e-8,1e-6
   --printfittingdetails
                         Print detailed infomation during fitting process e.g.
                         estimated split time from M(t) midpoint, initial and
