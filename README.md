@@ -34,7 +34,7 @@ optional arguments:
                         [default=1*2+25*1+1*2+1*3(MSMC2)], which has to be
                         consistent with MSMC2 or MSMC(default=10*1+15*2)
                         output you are using here
-  -beta BETA           Regularisation on estimating migration rat and population sizes. 
+  -beta BETA            Regularisation on estimating migration rat and population sizes. 
                         The bigger, the stronger penalty is.
                         Recommend: 1e-8,1e-6
   --printfittingdetails
@@ -51,7 +51,7 @@ optional arguments:
 ```
 You can find the example of input and output in the example filefolder. To get the output files in MSMC-IM/example/MSMC_IM_output, you need to run MSMC_IM.py using the input file Yoruba_French.8haps.combined.msmc2.final.txt by the following command line: 
 ```
-MSMC_IM.py --beta 1e-6 -o /MSMC-IM/example/MSMC_IM_output/Yoruba_French.8haps --printfittingdetails --plotfittingdetails --xlog /MSMC-IM/example/Yoruba_French.8haps.combined.msmc2.final.txt
+MSMC_IM.py -beta 1e-8,1e-6 -o /MSMC-IM/example/MSMC_IM_output/Yoruba_French.8haps --printfittingdetails --plotfittingdetails --xlog /MSMC-IM/example/Yoruba_French.8haps.combined.msmc2.final.txt
 ```
 Penatly option ```--beta``` is always recommended while running modern human population pairs. 
 
