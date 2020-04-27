@@ -1,7 +1,9 @@
 # MSMC-IM
 
 MSMC-IM fits a continuous Isolation-Migration(IM) model with time-dependent population sizes N1(t) and N2(t), and a time-dependent continuous symmetric migration rate m(t) to the estimated coalescence rates from MSMC/MSMC2, which essentially is a re-parameterization from the triple of functions {λ11(t), λ12(t), λ22(t)} to a new triple of functions {N1(t), N2(t), m(t)}. To use MSMC-IM, you need to run either MSMC or MSMC2 to get an estimate on within-pop coalescence rates and across-pop coalescence rates. With MSMC output/combined MSMC2 output as input, we simply run MSMC-IM model by 
-“MSMC_IM.py pair.combined.msmc2.txt > newestimates.output”. Also the time pattern needs to be specified, which is by default 1\*2+25\*1+1\*2+1\*3 as the default in MSMC2. In the output, MSMC-IM will rescale the scaled time in MSMC2 output by mutation rate 1.25e-8 into real time in generations, and report symmetric migration rates and M(t) in each time segment. 
+“MSMC_IM.py pair.combined.msmc2.txt > newestimates.output”. Also the time pattern needs to be specified, which is by default 1\*2+25\*1+1\*2+1\*3 as the default in MSMC2. In the output, MSMC-IM will rescale the scaled time in MSMC2 output by mutation rate 1.25e-8 (human) into real time in generations, and report symmetric migration rates and M(t) in each time segment. 
+
+**Citation**: *Wang K, Mathieson I, O’Connell J, Schiffels S (2020) Tracking human population structure through time from whole genome sequences. PLoS Genet 16(3): e1008552. https://doi.org/10.1371/journal.pgen.1008552*
 
 # Getting Started
 The program is written in python. Python 3 is required here. To use MSMC_IM.py, you have to import all neccessary functions written in MSMC_IM_funs.py. Make sure you download both python scripts for running MSMC-IM. 
