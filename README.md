@@ -1,14 +1,16 @@
 # MSMC-IM
 
 MSMC-IM fits a continuous Isolation-Migration(IM) model with time-dependent population sizes N1(t) and N2(t), and a time-dependent continuous symmetric migration rate m(t) to the estimated coalescence rates from MSMC/MSMC2, which essentially is a re-parameterization from the triple of functions {λ11(t), λ12(t), λ22(t)} to a new triple of functions {N1(t), N2(t), m(t)}. To use MSMC-IM, you need to run either MSMC or MSMC2 to get an estimate on within-pop coalescence rates and across-pop coalescence rates. With MSMC output/combined MSMC2 output as input, we simply run MSMC-IM model by 
-“MSMC_IM.py pair.combined.msmc2.txt > newestimates.output”. Also the time pattern needs to be specified, which is by default 1\*2+25\*1+1\*2+1\*3 as the default in MSMC2. In the output, MSMC-IM will rescale the scaled time in MSMC2 output by mutation rate 1.25e-8 into real time in generations, and report symmetric migration rates and M(t) in each time segment. 
+“MSMC_IM.py pair.combined.msmc2.txt > newestimates.output”. Also the time pattern needs to be specified, which is by default 1\*2+25\*1+1\*2+1\*3 as the default in MSMC2. In the output, MSMC-IM will rescale the scaled time in MSMC2 output by mutation rate 1.25e-8 (human) into real time in generations, and report symmetric migration rates and M(t) in each time segment. 
+
+**Citation**: *Wang K, Mathieson I, O’Connell J, Schiffels S (2020) Tracking human population structure through time from whole genome sequences. PLoS Genet 16(3): e1008552. https://doi.org/10.1371/journal.pgen.1008552*
 
 # Getting Started
 The program is written in python. Python 3 is required here. To use MSMC_IM.py, you have to import all neccessary functions written in MSMC_IM_funs.py. Make sure you download both python scripts for running MSMC-IM. 
 
 # Guidance of usage on MSMC_IM.py
 ```
-usage: MSMC_IM [-h] [-o O] [-N1 N1] [-N2 N2] [-m M] [-p P] [--beta BETA] 
+usage: MSMC_IM [-h] [-o O] [-N1 N1] [-N2 N2] [-m M] [-p P] [-beta BETA] 
                [--printfittingdetails] [--plotfittingdetails] [--xlog] 
                [--ylog]
                Input
@@ -34,9 +36,9 @@ optional arguments:
                         [default=1*2+25*1+1*2+1*3(MSMC2)], which has to be
                         consistent with MSMC2 or MSMC(default=10*1+15*2)
                         output you are using here
-  --beta BETA           Regularisation on population sizes. 
+  -beta BETA            Regularisation on estimating migration rat and population sizes. 
                         The bigger, the stronger penalty is.
-                        Recommend: 1e-6
+                        Recommend: 1e-8,1e-6
   --printfittingdetails
                         Print detailed infomation during fitting process e.g.
                         estimated split time from M(t) midpoint, initial and
@@ -51,7 +53,7 @@ optional arguments:
 ```
 You can find the example of input and output in the example filefolder. To get the output files in MSMC-IM/example/MSMC_IM_output, you need to run MSMC_IM.py using the input file Yoruba_French.8haps.combined.msmc2.final.txt by the following command line: 
 ```
-MSMC_IM.py --beta 1e-6 -o /MSMC-IM/example/MSMC_IM_output/Yoruba_French.8haps --printfittingdetails --plotfittingdetails --xlog /MSMC-IM/example/Yoruba_French.8haps.combined.msmc2.final.txt
+MSMC_IM.py -beta 1e-8,1e-6 -o /MSMC-IM/example/MSMC_IM_output/Yoruba_French.8haps --printfittingdetails --plotfittingdetails --xlog /MSMC-IM/example/Yoruba_French.8haps.combined.msmc2.final.txt
 ```
 Penatly option ```--beta``` is always recommended while running modern human population pairs. 
 
