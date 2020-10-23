@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(prog='MSMC_IM', description='Estimate time-dependetn migration rates through fitting IM model to coalescent rates fromMSMC')
 parser.add_argument('Input', help='Time dependent within-pop coalescent rates and cross-pop coalescent rates for a pair of populations, e.g. twopops.combined.msmc2.final.txt/twopops.msmc.final.txt')
+parser.add_argument('-mu', default=1.25e-8, type=float, help='mutation rate of species. Default is 1.25e-8 for human')
 parser.add_argument('-o', help='output directory and prefix of output', action='store')
 parser.add_argument('-N1', default=15000, type=float, help='Initial constant effective population size of Pop1 to start fitting process. Default=15000')
 parser.add_argument('-N2', default=15000, type=float, help='Initial constatnt effective population size of Pop2 to start fitting process. Default=15000')
@@ -25,15 +26,15 @@ parser.add_argument('--printfittingdetails', default=False, action="store_true",
 parser.add_argument('--plotfittingdetails', default=False, action="store_true", help="Plot IM estiamtes on m(t), M(t),popsize, coalescent rates, in contrast to MSMC estimates. Default=False")
 parser.add_argument('--xlog', default=False, action="store_true", help="Plot all parameters in log scale on x-axis. Default=False. Recommend to add this flag.")
 parser.add_argument('--ylog', default=False, action="store_true", help="Plot all parameters in log scale on y-axis. Default=False")
-args = parser.parse_args() 
+args = parser.parse_args()
 
 if not os.path.dirname(args.o): print("output directory required")
 beta=[float(args.beta.split(",")[0]), float(args.beta.split(",")[1])]
-time_lr_boundaries, msmc_lambdas00, msmc_lambdas01, msmc_lambdas11 = MSMC_IM_funcs.read_lambdas_from_MSMC(args.Input) #time_lr_boundaries=[[left1,right1], []... []]
+time_lr_boundaries, msmc_lambdas00, msmc_lambdas01, msmc_lambdas11 = MSMC_IM_funcs.read_lambdas_from_MSMC(args.Input, args.mu) #time_lr_boundaries=[[left1,right1], []... []]
 N1_s = [1/(2*lambda_00) for lambda_00 in msmc_lambdas00]
 N2_s = [1/(2*lambda_11) for lambda_11 in msmc_lambdas11]
-left_boundaries = [k[0] for k in time_lr_boundaries] 
-right_boundaries = [k[1] for k in time_lr_boundaries] 
+left_boundaries = [k[0] for k in time_lr_boundaries]
+right_boundaries = [k[1] for k in time_lr_boundaries]
 right_boundaries[-1] = left_boundaries[-1] * 4
 T_i = np.copy(left_boundaries)
 
@@ -109,7 +110,7 @@ of = open(os.path.dirname(args.o)+'/{}.b1_{}.b2_{}.MSMC_IM.estimates.txt'.format
 of.write("left_time_boundary\tim_N1\tim_N2\tm\tM\n")
 
 for i in range(len(left_boundaries)):    
-    of.write(str(left_boundaries[i]) +"\t"+ str(N1_List[i]) +"\t"+ str(N2_List[i]) +"\t"+ str(m_List[i]) +"\t"+ str(CumulativeDF[i]) +"\n") 
+    of.write(str(left_boundaries[i]) +"\t"+ str(N1_List_prime[i]) +"\t"+ str(N2_List_prime[i]) +"\t"+ str(m_List[i]) +"\t"+ str(CumulativeDF[i]) +"\n") 
 of.close()
         
 if args.printfittingdetails:
