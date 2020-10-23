@@ -10,7 +10,7 @@ The program is written in python. Python 3 is required here. To use MSMC_IM.py, 
 
 # Guidance of usage on MSMC_IM.py
 ```
-usage: MSMC_IM [-h] [-o O] [-N1 N1] [-N2 N2] [-m M] [-p P] [-beta BETA] 
+usage: MSMC_IM [-h] [-mu MU] [-o O] [-N1 N1] [-N2 N2] [-m M] [-p P] [-beta BETA] 
                [--printfittingdetails] [--plotfittingdetails] [--xlog] 
                [--ylog]
                Input
@@ -25,6 +25,7 @@ positional arguments:
 
 optional arguments:
   -h, --help            show this help message and exit
+  -mu MU                mutation rate of species. Default is 1.25e-8 for human
   -o O                  output directory and prefix of output
   -N1 N1                Initial constant effective population size of Pop1 to
                         start fitting process. Default=15000
