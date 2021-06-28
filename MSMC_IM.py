@@ -48,10 +48,11 @@ for seg in args.p.strip().split('+'):
 len_timesegs = sum([repeat_ * segs_ for repeat_, segs_ in zip(repeat,segs)])
 if len_timesegs != len(left_boundaries): raise Exception("Input Error! The time pattern should be consistent with MSMC")
 msmc_rCCR = [lambda_01 * 2 / (lambda_00 + lambda_11) for lambda_00, lambda_01, lambda_11 in zip(msmc_lambdas00, msmc_lambdas01, msmc_lambdas11)]
-ln = repeat[-1] * segs[-1] + repeat[-2] * segs[-2] #Artifically correct lambdas in the most right time interval(s) to lambda into the second most right time interval
-if msmc_lambdas00[-(ln+1)] > 1.5 * min(msmc_lambdas00[-ln:]) or msmc_lambdas00[-(ln+1)] < max(msmc_lambdas00[-ln:])/1.5: msmc_lambdas00[-ln:] = [msmc_lambdas00[-(ln+1)]] * ln
-if msmc_lambdas01[-(ln+1)] > 1.5 * min(msmc_lambdas01[-ln:]) or msmc_lambdas01[-(ln+1)] < max(msmc_lambdas01[-ln:])/1.5: msmc_lambdas01[-ln:] = [msmc_lambdas01[-(ln+1)]] * ln
-if msmc_lambdas11[-(ln+1)] > 1.5 * min(msmc_lambdas11[-ln:]) or msmc_lambdas11[-(ln+1)] < max(msmc_lambdas11[-ln:])/1.5: msmc_lambdas11[-ln:] =[msmc_lambdas11[-(ln+1)]] * ln
+if len(segs) > 2 and segs[-1] == 1 and segs[-2] == 1:    #Artifically correctiion on the extreme estimates of the last two lambda (i.e. in the ancient time period)
+    ln = repeat[-1] * segs[-1] + repeat[-2] * segs[-2] 
+    if msmc_lambdas00[-(ln+1)] > 1.5 * min(msmc_lambdas00[-ln:]) or msmc_lambdas00[-(ln+1)] < max(msmc_lambdas00[-ln:])/1.5: msmc_lambdas00[-ln:] = [msmc_lambdas00[-(ln+1)]] * ln
+    if msmc_lambdas01[-(ln+1)] > 1.5 * min(msmc_lambdas01[-ln:]) or msmc_lambdas01[-(ln+1)] < max(msmc_lambdas01[-ln:])/1.5: msmc_lambdas01[-ln:] = [msmc_lambdas01[-(ln+1)]] * ln
+    if msmc_lambdas11[-(ln+1)] > 1.5 * min(msmc_lambdas11[-ln:]) or msmc_lambdas11[-(ln+1)] < max(msmc_lambdas11[-ln:])/1.5: msmc_lambdas11[-ln:] =[msmc_lambdas11[-(ln+1)]] * ln
 
 realTMRCA_00 = MSMC_IM_funcs.read_tmrcadist_from_MSMC(T_i, left_boundaries, msmc_lambdas00)
 realTMRCA_01 = MSMC_IM_funcs.read_tmrcadist_from_MSMC(T_i, left_boundaries, msmc_lambdas01)
@@ -188,7 +189,7 @@ if args.plotfittingdetails:
     plot(left_boundaries, msmc_rCCR, '-.', linewidth=0.3, label='MSMC:rCCR', drawstyle='steps-post', c='black')
     plot(left_boundaries, CumulativeDF, label='Infer: CDF', c='orange')
     if max(CumulativeDF) >= 0.25:
-        plt.stem(xVec, yVec, linefmt=':', c='orange')
+        plt.stem(xVec, yVec, linefmt=':')
     plt.legend(prop={'size': 8})
     plt.xlim(0, 2e5)
     plt.ylim((0,1))
