@@ -93,7 +93,7 @@ else:
 xVec = [getCDFintersect(t, CDF_t, 0.25), getCDFintersect(t, CDF_t, 0.5), getCDFintersect(t, CDF_t, 0.75)]
 yVec = [0.25, 0.5, 0.75]
 plt.semilogx(t, CDF_t, label='M(t)', c='orange')
-plt.stem(xVec, yVec, linefmt=':', c='orange', basefmt=" ")
+plt.stem(xVec, yVec, linefmt=':', basefmt=" ")
 plt.xlabel("Generations ago", fontsize=12)
 plt.ylabel("M(t)", fontsize=12)
 plt.ylim((0,1))
