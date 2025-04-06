@@ -68,7 +68,7 @@ left_boundaries	im_N1	im_N2	m	M
 417.1872	26649.753206298024	30539.007130749862	3.9776767728370866e-25	0.0
 ...
 ```
-Here we report M(t) evaluated at each time boundaries. As the cumulative probabiliy function of m(t), M(t) is a continuous distribtuion which can be evaluated at any given time t. ```plot_utils.py```enables you to plot M(t) at given specific time grid, simply by ```plot_utils.py -o /outdir/Yoruba_French.oranyprefix -tmax 100000 -n 100 /dir/to/Yoruba_French.estimates.txt``` to get ```/outdir/Yoruba_French.oranyprefix.plot_M_t.pdf```. 
+Here we report M(t) evaluated at each time boundaries. As the cumulative probabiliy function of m(t), M(t) is a continuous distribtuion which can be evaluated at any given time t. ```plot_utils.py```enables you to plot M(t) at given specific time grid, simply by ```plot_utils.py -o ./outdir/Yoruba_French.oranyprefix -tmax 100000 -n 100 ./example/MSMC_IM_output/Yoruba_French.8haps.MSMC_IM.estimates.txt``` to get ```./outdir/Yoruba_French.oranyprefix.plot_M_t.pdf```. 
 
 You have the option for printing these internally estimated parameters while fitting through ```option --printfittingdetails```. If you would like to have a nice plot showing you how the fit looks like, you can plot these paramaters through ```option --plotfittingdetails```, and  ```option --xlog``` is always recommend. See ```.fittingdetails.txt``` and ```.fittingdetails.b21e-06.xlog.pdf``` in the /example/MSMC_IM_output/ filefolder. 
 Here is an example of ```.fittingdetails.txt```file:
